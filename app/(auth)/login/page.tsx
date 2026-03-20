@@ -5,8 +5,20 @@ import Logo from "../../component/ui/logo"
 import { FaGithub } from "react-icons/fa"
 import { motion, Variants } from "framer-motion"
 import { useEffect, useState } from "react"
+import { signIn } from "next-auth/react"
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 
 export default function LoginPage() {
+  const { data: session } = useSession()
+const router = useRouter()
+
+useEffect(() => {
+  if (session) {
+    router.push("/")
+  }
+}, [session, router])
+
   const [mounted, setMounted] = useState(false)
   const [dark, setDark] = useState(false)
 
@@ -62,7 +74,7 @@ export default function LoginPage() {
       {/* THEME TOGGLE */}
       <button
         onClick={toggleTheme}
-        className="absolute top-6 right-6 z-30 px-4 py-2 rounded-full bg-white/80 dark:bg-white/10 backdrop-blur-md border border-gray-200 dark:border-white/10 text-sm font-medium shadow-md hover:scale-105 transition text-gray-800 dark:text-white"
+        className="absolute cursor-pointer top-6 right-6 z-30 px-4 py-2 rounded-full bg-white/80 dark:bg-white/10 backdrop-blur-md border border-gray-200 dark:border-white/10 text-sm font-medium shadow-md hover:scale-105 transition text-gray-800 dark:text-white"
       >
         {dark ? "☀️ Light" : "🌙 Dark"}
       </button>
@@ -80,34 +92,76 @@ export default function LoginPage() {
       />
 
       {/* LEFT SIDE: Information */}
-      <div className="hidden md:flex w-1/2 bg-linear-to-br from-purple-700 via-purple-600 to-blue-600 dark:from-slate-900 dark:to-black text-white items-center justify-center p-10 relative z-10">
+<div className="hidden md:flex w-1/2 relative items-center justify-center p-10 overflow-hidden border-r border-gray-200/50 dark:border-white/5">
+  
+  {/* Elegant Light Mode Background */}
+  <div className="absolute inset-0 dark:hidden bg-linear-to-br from-white via-slate-50 to-purple-50">
+    
+    {/* Soft gradient blobs */}
+    <div className="absolute top-[-10%] left-[-10%] w-[70%] h-[70%] rounded-full bg-purple-200/40 blur-[120px]" />
+    <div className="absolute bottom-[-10%] right-[-10%] w-[70%] h-[70%] rounded-full bg-blue-200/40 blur-[120px]" />
+
+    {/* Subtle lighting gradient */}
+    <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(139,92,246,0.15),transparent_40%)]" />
+
+    {/* Glass overlay */}
+    <div className="absolute inset-0 backdrop-blur-[80px] bg-white/30" />
+
+    {/* Grain texture */}
+    <div className="absolute inset-0 opacity-[0.04] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
+  </div>
+
+  {/* Dark Mode Background */}
+  <div className="absolute inset-0 hidden dark:block bg-[#050505]">
+    <div className="absolute top-[-20%] left-[-10%] w-[80%] h-[80%] rounded-full bg-purple-900/20 blur-[120px]" />
+    <div className="absolute bottom-[-20%] right-[-10%] w-[80%] h-[80%] rounded-full bg-blue-900/20 blur-[120px]" />
+    <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
+  </div>
+
+  <motion.div
+    initial="hidden"
+    animate="visible"
+    variants={containerVariants}
+    className="max-w-md relative z-20"
+  >
+    <motion.div variants={itemVariants} className="mb-6">
+      <span className="px-3 py-1 text-xs font-bold tracking-widest uppercase bg-purple-100 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-full mb-4 inline-block">
+        Version 1.0
+      </span>
+      <h1 className="text-6xl font-extrabold leading-[1.1] tracking-tighter text-slate-900 dark:text-white">
+        Stash{" "}
+        <span className="text-transparent bg-clip-text bg-linear-to-r from-purple-600 to-blue-500">
+          n
+        </span>{" "}
+        Grab
+      </h1>
+    </motion.div>
+
+    <motion.p
+      variants={itemVariants}
+      className="text-lg text-slate-600 dark:text-gray-400 mb-10 leading-relaxed"
+    >
+      Your digital vault for knowledge. Organize resources, track growth, and master your craft.
+    </motion.p>
+
+    <motion.div variants={itemVariants} className="space-y-4">
+      {[
+        { text: "Organize your learning", icon: "📦" },
+        { text: "Track your progress", icon: "📊" },
+        { text: "Stay consistent", icon: "🚀" }
+      ].map((item, i) => (
         <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={containerVariants}
-          className="max-w-md"
+          key={i}
+          whileHover={{ x: 8, backgroundColor: "rgba(139, 92, 246, 0.1)" }}
+          className="flex items-center gap-4 bg-white/50 dark:bg-white/5 backdrop-blur-md border border-slate-200 dark:border-white/10 w-fit px-5 py-3 rounded-2xl shadow-sm transition-colors text-slate-700 dark:text-gray-200 font-medium cursor-pointer"
         >
-          <motion.h1 variants={itemVariants} className="text-5xl font-bold mb-6 leading-tight tracking-tight">
-            Welcome to <br /> <span className="text-purple-200">Stash-n-Grab</span>
-          </motion.h1>
-          <motion.p variants={itemVariants} className="text-lg text-white/80 mb-8">
-            Save your resources, track your progress, and build your knowledge — all in one place.
-          </motion.p>
-
-          <motion.div variants={itemVariants} className="space-y-4 text-white/90 font-medium">
-            {["📦 Organize your learning", "📊 Track your progress", "🚀 Stay consistent"].map((text, i) => (
-              <motion.div 
-                key={i}
-                whileHover={{ x: 10 }}
-                className="flex items-center gap-3 bg-white/10 w-fit px-4 py-2 rounded-full backdrop-blur-sm border border-white/10"
-              >
-                {text}
-              </motion.div>
-            ))}
-          </motion.div>
+          <span className="text-xl">{item.icon}</span>
+          {item.text}
         </motion.div>
-      </div>
-
+      ))}
+    </motion.div>
+  </motion.div>
+</div>
       {/* RIGHT SIDE: Auth Card */}
       <div className="flex w-full md:w-1/2 items-center justify-center p-4 relative z-10">
         <motion.div
@@ -133,8 +187,9 @@ export default function LoginPage() {
             <motion.button 
               variants={itemVariants}
               whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="flex items-center justify-center gap-3 w-full border-2 border-gray-100 dark:border-white/10 rounded-xl p-3.5 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors font-semibold text-gray-700 dark:text-gray-200 shadow-sm"
+              whileTap={{ scale: 0.98 }} 
+              onClick={() => signIn("google",{ callbackUrl: "/" })}
+              className="flex cursor-pointer items-center justify-center gap-3 w-full border-2 border-gray-100 dark:border-white/10 rounded-xl p-3.5 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors font-semibold text-gray-700 dark:text-gray-200 shadow-sm"
             >
               <FcGoogle size={24} />
               Continue with Google
@@ -144,7 +199,8 @@ export default function LoginPage() {
               variants={itemVariants}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="flex items-center justify-center gap-3 w-full bg-[#171717] dark:bg-white text-white dark:text-black rounded-xl p-3.5 hover:opacity-90 transition-colors font-semibold shadow-lg shadow-black/20"
+              onClick={() => signIn("github", { callbackUrl: "/" })}
+              className="flex cursor-pointer items-center justify-center gap-3 w-full bg-[#171717] dark:bg-white text-white dark:text-black rounded-xl p-3.5 hover:opacity-90 transition-colors font-semibold shadow-lg shadow-black/20"
             >
               <FaGithub size={24} />
               Continue with GitHub
