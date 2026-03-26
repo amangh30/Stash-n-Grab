@@ -14,21 +14,43 @@ export const authOptions = {
       clientSecret: process.env.GITHUB_SECRET!
     })
   ],
+
   callbacks: {
     async signIn({ user }: any) {
       await connectDB()
 
-      const existingUser = await User.findOne({ email: user.email })
+      let dbUser = await User.findOne({ email: user.email })
 
-      if (!existingUser) {
-        await User.create({
+      if (!dbUser) {
+        dbUser = await User.create({
           name: user.name,
           email: user.email,
           image: user.image,
         })
+      } else {
+        // update user if anything changed
+        dbUser.name = user.name
+        dbUser.image = user.image
+        await dbUser.save()
       }
 
       return true
+    },
+
+    async session({ session }: any) {
+      await connectDB()
+
+      const dbUser = await User.findOne({
+        email: session.user.email
+      })
+
+      // attach DB user info to session
+      session.user.id = dbUser._id
+      session.user.xp = dbUser.xp
+      session.user.level = dbUser.level
+      session.user.streak = dbUser.streak
+
+      return session
     }
   }
 }
