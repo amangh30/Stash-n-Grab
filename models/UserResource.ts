@@ -23,6 +23,8 @@ const UserResourceSchema = new mongoose.Schema(
     progress: {
       type: Number,
       default: 0,
+      min: 0,
+      max: 100,
     },
 
     notes: String,
@@ -36,6 +38,9 @@ const UserResourceSchema = new mongoose.Schema(
   },
   { timestamps: true }
 )
+
+// 🔥 Prevent duplicate save
+UserResourceSchema.index({ userId: 1, resourceId: 1 }, { unique: true })
 
 export default mongoose.models.UserResource ||
   mongoose.model("UserResource", UserResourceSchema)
