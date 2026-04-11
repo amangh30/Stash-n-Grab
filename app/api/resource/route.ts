@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { connectDB } from "@/lib/mongodb"
 import Resource from "@/models/Resource"
+import UserResource from "@/models/UserResource"
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions)
@@ -21,6 +22,17 @@ export async function POST(req: Request) {
     link: body.link,
     tags: body.tags || [],
     createdBy: session.user.id,
+  })
+
+  await UserResource.create({
+    userId: session.user.id,
+    resourceId: resource._id,
+    status: "not_started",
+    progress: 0,
+  })
+
+  await Resource.findByIdAndUpdate(resource._id, {
+    $inc: { saves: 1 }
   })
 
   return NextResponse.json(resource)

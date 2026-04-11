@@ -45,6 +45,7 @@ export const authOptions = {
       })
 
       // attach DB user info to session
+      session.user.id = dbUser._id.toString()
       session.user.id = dbUser._id
       session.user.xp = dbUser.xp
       session.user.level = dbUser.level
