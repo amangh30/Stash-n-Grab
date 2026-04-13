@@ -1,10 +1,12 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import CreateResource from "@/components/CreateResource"
 import ResourceList from "./ResourceList"
 import MyResources from "./MyResources"
 import SearchBar from "./SearchBar"
+import Leaderboard from "./Leaderboard" // 🔥 Updated to handle modal logic
+import { useRouter } from "next/navigation"
 
 export default function HomeClient({ 
   user, 
@@ -12,13 +14,38 @@ export default function HomeClient({
   userResources: initialUserResources 
 }: any) {
   const [open, setOpen] = useState(false)
+  const [showLeaderboard, setShowLeaderboard] = useState(false) // 🔥 State for leaderboard
 
-  // 🔥 1. Lift State: Manage lists locally for instant reactivity
   const [resources, setResources] = useState(initialResources)
   const [userResources, setUserResources] = useState(initialUserResources)
 
-  // 🔥 2. Dynamic savedIds: This re-calculates instantly whenever userResources changes
-  // Added a strict guard to prevent the "reading toString of undefined" error
+  const router = useRouter() // 🔥 Initialize router
+
+
+  // 🔥 1. Sync local state if server props change (important for "coming back")
+  useEffect(() => {
+    setResources(initialResources)
+    setUserResources(initialUserResources)
+  }, [initialResources, initialUserResources])
+
+  const handleCreateSuccess = (newResource: any) => {
+    // 🔥 2. Instant UI Update (The "Fast" part)
+    setResources((prev: any) => [newResource, ...prev])
+    
+    const newUserRes = {
+      _id: `temp-${Date.now()}`,
+      resourceId: newResource,
+      status: "not_started",
+      progress: 0
+    }
+    setUserResources((prev: any) => [newUserRes, ...prev])
+
+    // 🔥 3. Background Sync (The "Permanent" part)
+    // This tells Next.js to re-run the Server Component (HomePage) 
+    // and refresh the props without a hard reload.
+    router.refresh()
+  }
+
   const savedIds = useMemo(() => {
     if (!userResources) return []
     return userResources
@@ -26,21 +53,6 @@ export default function HomeClient({
       .map((item: any) => item.resourceId._id.toString())
   }, [userResources])
 
-  // 🔥 3. Handle Instant Creation
-  const handleCreateSuccess = (newResource: any) => {
-    // Add to the global explore list
-    setResources((prev: any) => [newResource, ...prev])
-    
-    // Also add to user stash instantly as "not_started"
-    // Assuming your API returns the populated resource object
-    const newUserRes = {
-      _id: `temp-${Date.now()}`, // Temporary ID for React key stability
-      resourceId: newResource,
-      status: "not_started",
-      progress: 0
-    }
-    setUserResources((prev: any) => [newUserRes, ...prev])
-  }
 
   return (
     <div className="flex flex-col gap-10">
@@ -56,15 +68,25 @@ export default function HomeClient({
         <p className="text-lg text-slate-600 dark:text-gray-400">
           Search, discover, and manage your digital resources in one place.
         </p>
-        
-        {user && (
+
+        <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 mt-6">
+          {/* 🔥 Leaderboard Toggle Button */}
           <button 
-            onClick={() => setOpen(true)}
-            className="mt-6 px-6 py-2.5 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-700 transition-all shadow-lg shadow-purple-500/20 hover:shadow-purple-500/40 active:scale-95"
+            onClick={() => setShowLeaderboard(true)}
+            className="px-6 py-2.5 rounded-xl bg-white/50 dark:bg-white/10 backdrop-blur-md border border-slate-200 dark:border-white/10 text-slate-700 dark:text-gray-200 font-semibold hover:bg-slate-100 dark:hover:bg-white/20 transition-all shadow-sm active:scale-95"
           >
-            + Add Resource
+            🏆 Rankings
           </button>
-        )}
+
+          {user && (
+            <button 
+              onClick={() => setOpen(true)}
+              className="px-6 py-2.5 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-700 transition-all shadow-lg shadow-purple-500/20 hover:shadow-purple-500/40 active:scale-95"
+            >
+              + Add Resource
+            </button>
+          )}
+        </div>
       </div>
 
       {/* 2. Search Section */}
@@ -74,49 +96,36 @@ export default function HomeClient({
 
       {/* 3. Content Sections */}
       <div className="flex flex-col gap-12 mt-4">
-        
-        {/* Explore Resources */}
         <section>
           <div className="flex items-center gap-3 mb-6">
             <span className="text-3xl">🌍</span>
             <h2 className="text-2xl font-bold text-slate-800 dark:text-gray-100">Explore Resources</h2>
           </div>
-          
           <div className="bg-white/60 dark:bg-[#16161c]/80 backdrop-blur-md border border-gray-100 dark:border-white/5 rounded-3xl p-6 shadow-xl">
-            <ResourceList
-                resources={resources}
-                user={user}
-                savedIds={savedIds}
-                setUserResources={setUserResources} // 🔥 Pass the setter for instant saving
-                />
+            <ResourceList resources={resources} user={user} savedIds={savedIds} setUserResources={setUserResources} />
           </div>
         </section>
 
-        {/* My Resources (Conditional) */}
         {user && (
           <section>
             <div className="flex items-center gap-3 mb-6">
               <span className="text-3xl">🔒</span>
               <h2 className="text-2xl font-bold text-slate-800 dark:text-gray-100">My Resources</h2>
             </div>
-            
             <div className="bg-white/60 dark:bg-[#16161c]/80 backdrop-blur-md border border-gray-100 dark:border-white/5 rounded-3xl p-6 shadow-xl">
-              <MyResources 
-                userResources={userResources} 
-                setUserResources={setUserResources} // 🔥 Pass the setter for instant progress/unsave
-              />
+              <MyResources userResources={userResources} setUserResources={setUserResources} />
             </div>
           </section>
         )}
-        
       </div>
 
-      {/* 4. Modal Overlay */}
+      {/* 4. Modals */}
+      {showLeaderboard && (
+        <Leaderboard onClose={() => setShowLeaderboard(false)} />
+      )}
+
       {open && (
-        <CreateResource 
-            onClose={() => setOpen(false)} 
-            onSuccess={handleCreateSuccess} // 🔥 Pass the creation handler
-        />
+        <CreateResource onClose={() => setOpen(false)} onSuccess={handleCreateSuccess} />
       )}
     </div>
   )

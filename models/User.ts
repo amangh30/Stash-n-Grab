@@ -11,6 +11,10 @@ const UserSchema = new mongoose.Schema(
     level: { type: Number, default: 1 },
     streak: { type: Number, default: 0 },
     lastActive: { type: Date, default: null },
+    achievements: {
+      type: [String],
+      default: [],
+    }
   },
   { timestamps: true }
 )

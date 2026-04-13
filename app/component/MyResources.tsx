@@ -3,35 +3,39 @@
 import { useState } from "react"
 import { motion, Variants, AnimatePresence } from "framer-motion"
 
-// 1. Refined Animation Variants for a "Popping" feel
+// ✅ Snappy Spring Physics
+const springConfig = {
+  type: "spring",
+  stiffness: 260,
+  damping: 20,
+} as const
+
+const layoutConfig = {
+  type: "spring",
+  stiffness: 300,
+  damping: 30,
+} as const
+
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
   show: {
     opacity: 1,
-    transition: { staggerChildren: 0.08 } // Faster stagger for snappiness
+    transition: { staggerChildren: 0.08 }
   }
 }
 
 const itemVariants: Variants = {
-  hidden: { 
-    opacity: 0, 
-    scale: 0.9, 
-    y: 20 
-  },
-  show: { 
-    opacity: 1, 
-    scale: 1, 
+  hidden: { opacity: 0, scale: 0.9, y: 20 },
+  show: {
+    opacity: 1,
+    scale: 1,
     y: 0,
-    transition: {
-      type: "spring",
-      stiffness: 260,
-      damping: 20
-    }
+    transition: springConfig
   },
-  exit: { 
-    opacity: 0, 
-    scale: 0.5, 
-    transition: { duration: 0.2, ease: "easeOut" } 
+  exit: {
+    opacity: 0,
+    scale: 0.5,
+    transition: { duration: 0.2 }
   }
 }
 
@@ -39,13 +43,18 @@ export default function MyResources({ userResources, setUserResources }: any) {
   const [loadingId, setLoadingId] = useState<string | null>(null)
   const [xpGain, setXpGain] = useState<number | null>(null)
   const [levelUp, setLevelUp] = useState<number | null>(null)
+  const [newAchievement, setNewAchievement] = useState<string | null>(null)
+
+  const activeResources = userResources.filter((i: any) => i.status !== "completed")
+  const completedResources = userResources.filter((i: any) => i.status === "completed")
+
+  const playDing = () => {
+    const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3")
+    audio.volume = 0.5
+    audio.play().catch(() => {})
+  }
 
   const updateProgress = async (resourceId: string, progress: number, status: string) => {
-    if (status === "completed") {
-      const existing = userResources.find((i: any) => i.resourceId?._id?.toString() === resourceId)
-      if (existing?.status === "completed") return
-    }
-
     setLoadingId(resourceId)
     try {
       const res = await fetch("/api/resource/progress", {
@@ -55,6 +64,12 @@ export default function MyResources({ userResources, setUserResources }: any) {
       const data = await res.json()
       setLoadingId(null)
 
+      if (data.newAchievements?.length > 0) {
+        playDing()
+        setNewAchievement(data.newAchievements[0])
+        setTimeout(() => setNewAchievement(null), 4000)
+      }
+
       if (status === "completed") {
         setXpGain(50)
         if (data?.user?.level) setLevelUp(data.user.level)
@@ -62,15 +77,14 @@ export default function MyResources({ userResources, setUserResources }: any) {
       }
 
       setUserResources((prev: any) =>
-        prev.map((item: any) => {
-          if (item.resourceId?._id?.toString() === resourceId) {
-            return { ...item, progress, status }
-          }
-          return item
-        })
+        prev.map((item: any) =>
+          item.resourceId?._id?.toString() === resourceId
+            ? { ...item, progress, status }
+            : item
+        )
       )
     } catch (error) {
-      console.error("Update failed", error)
+      console.error(error)
       setLoadingId(null)
     }
   }
@@ -82,154 +96,162 @@ export default function MyResources({ userResources, setUserResources }: any) {
         method: "POST",
         body: JSON.stringify({ resourceId }),
       })
-
       setUserResources((prev: any) =>
-        prev.filter((item: any) => item.resourceId._id.toString() !== resourceId)
+        prev.filter((i: any) => i.resourceId._id.toString() !== resourceId)
       )
-    } catch (err) {
-      console.error("Unsave failed", err)
     } finally {
       setLoadingId(null)
     }
   }
 
-  if (!userResources || userResources.length === 0) {
-    return (
-      <motion.div 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="text-center text-gray-500 py-10 italic"
-      >
-        No resources yet. Your vault is empty! 🔒
-      </motion.div>
-    )
-  }
+  // Helper to render the cards
+  const renderCards = (list: any[], isCompleted: boolean) => (
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="show"
+      className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"
+    >
+      <AnimatePresence mode="popLayout">
+        {list.map((item) => {
+          const res = item.resourceId
+          const id = res._id.toString()
+          const isUpdating = loadingId === id
 
-  return (
-    <>
-      <motion.div 
-        variants={containerVariants}
-        initial="hidden"
-        animate="show"
-        className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"
-      >
-        {/* 🔥 popLayout ensures exiting cards don't block the space during animation */}
-        <AnimatePresence mode="popLayout">
-          {userResources.map((item: any) => {
-            if (!item?._id || !item?.resourceId?._id) return null;
-
-            const res = item.resourceId;
-            const id = res._id.toString();
-            const itemKey = item._id.toString();
-            const isUpdating = loadingId === id;
-
-            return (
-              <motion.div
-                key={itemKey} 
-                layout // 🔥 Animates the size and position changes
-                variants={itemVariants}
-                initial="hidden"
-                animate="show"
-                exit="exit"
-                // 🔥 Physics-based layout transition (no more jumping!)
-                transition={{
-                  layout: { type: "spring", stiffness: 300, damping: 30 }
-                }}
-                whileHover={{ y: -8, scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="p-6 rounded-3xl bg-white/60 dark:bg-purple-900/10 backdrop-blur-md border border-slate-200 dark:border-purple-500/20 hover:shadow-2xl hover:shadow-purple-500/10 transition-shadow relative overflow-hidden group"
-              >
-                {/* Background Glow */}
-                <div className="absolute -right-10 -top-10 w-32 h-32 bg-purple-400/10 rounded-full blur-3xl group-hover:bg-purple-400/20 transition-all pointer-events-none" />
-                
-                {/* Header */}
-                <div className="flex justify-between items-start mb-4 relative z-10">
-                  <div className="flex gap-3 items-center">
-                    <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-500/20 flex items-center justify-center text-lg shadow-inner">
-                      {item.status === "completed" ? "✅" : "📚"}
-                    </div>
-                    <span className="text-[10px] uppercase tracking-widest font-bold px-3 py-1 bg-purple-100 dark:bg-purple-500/20 text-purple-600 dark:text-purple-300 rounded-full border border-purple-200 dark:border-purple-500/30">
-                      {item.status.replace("_", " ")}
-                    </span>
-                  </div>
-
-                  <button
-                    onClick={() => handleUnsave(id)}
-                    className="p-2 rounded-lg bg-red-500/5 text-red-500 opacity-0 group-hover:opacity-100 hover:bg-red-500 hover:text-white transition-all duration-300"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
+          return (
+            <motion.div
+              key={item._id.toString()}
+              layout // 🔥 This makes the card slide when other cards exit
+              variants={itemVariants}
+              initial="hidden"
+              animate="show"
+              exit="exit"
+              transition={{ layout: layoutConfig }}
+              whileHover={{ y: -5 }}
+              className={`p-6 rounded-3xl backdrop-blur-md border relative overflow-hidden group flex flex-col justify-between ${
+                isCompleted 
+                ? "bg-green-500/5 border-green-500/20 opacity-80" 
+                : "bg-white/60 dark:bg-purple-900/10 border-slate-200 dark:border-purple-500/20 shadow-sm"
+              }`}
+            >
+              <div className="flex justify-between items-start mb-4">
+                <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-500/20 flex items-center justify-center text-lg">
+                  {isCompleted ? "🏆" : "📚"}
                 </div>
+                <button
+                  onClick={() => handleUnsave(id)}
+                  className="p-2 rounded-lg bg-red-500/5 text-red-500 opacity-0 group-hover:opacity-100 hover:bg-red-500 hover:text-white transition-all"
+                >
+                  ✕
+                </button>
+              </div>
 
-                <div className="relative z-10">
-                  <h3 className="font-bold text-lg text-slate-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
-                    {res.title}
-                  </h3>
-                  <p className="text-sm text-slate-500 dark:text-gray-400 mt-2 line-clamp-2 leading-relaxed">
-                    {res.description}
-                  </p>
-                </div>
+              <div>
+                <h3 className="font-bold text-lg text-slate-900 dark:text-white">{res.title}</h3>
+                <p className="text-sm text-slate-500 mt-1 line-clamp-2">{res.description}</p>
 
-                {/* Progress */}
-                <div className="mt-6 relative z-10">
-                  <div className="flex justify-between text-xs font-semibold mb-2 dark:text-gray-300">
-                    <span>Progress</span>
+                <div className="mt-6">
+                  <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">
+                    <span>{isCompleted ? "Mastered" : "Progress"}</span>
                     <span>{item.progress}%</span>
                   </div>
-                  <div className="w-full bg-slate-200 dark:bg-white/10 h-2.5 rounded-full overflow-hidden">
+                  <div className="w-full bg-slate-200 dark:bg-white/5 h-1.5 rounded-full overflow-hidden">
                     <motion.div
-                      layout // 🔥 Animates the progress bar width increase smoothly
                       initial={false}
                       animate={{ width: `${item.progress}%` }}
-                      transition={{ type: "spring", stiffness: 100, damping: 15 }}
-                      className="bg-gradient-to-r from-purple-500 to-blue-500 h-full rounded-full"
+                      className={`h-full ${isCompleted ? "bg-green-500" : "bg-purple-600"}`}
                     />
                   </div>
                 </div>
+              </div>
 
-                {/* Actions */}
-                <div className="flex items-center gap-2 mt-6 relative z-10">
-                  {item.progress < 100 && (
+              <div className="flex gap-2 mt-6">
+                {isCompleted ? (
+                  <button
+                    disabled={isUpdating}
+                    onClick={() => updateProgress(id, 0, "in_progress")}
+                    className="w-full text-xs font-bold py-3 rounded-xl border border-green-500/30 text-green-600 hover:bg-green-500 hover:text-white transition-all"
+                  >
+                    {isUpdating ? "..." : "🔄 Repeat Stash"}
+                  </button>
+                ) : (
+                  <>
                     <button
                       disabled={isUpdating}
                       onClick={() => updateProgress(id, Math.min(item.progress + 20, 100), "in_progress")}
-                      className="flex-1 text-xs font-bold py-2.5 px-3 rounded-xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/10 transition-all disabled:opacity-50"
+                      className="flex-1 text-xs font-bold py-3 rounded-xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-50 transition-all"
                     >
-                      {isUpdating ? "..." : "+20%"}
+                      +20%
                     </button>
-                  )}
-
-                  {item.status !== "completed" && (
                     <button
                       disabled={isUpdating}
                       onClick={() => updateProgress(id, 100, "completed")}
-                      className="flex-[2] text-xs font-bold py-2.5 px-3 rounded-xl bg-purple-600 text-white shadow-lg shadow-purple-500/30 hover:bg-purple-700 transition-all disabled:opacity-50 active:scale-95"
+                      className="flex-1 text-xs font-bold py-3 rounded-xl bg-purple-600 text-white shadow-lg active:scale-95 transition-all"
                     >
-                      {isUpdating ? "Updating..." : "Mark Complete"}
+                      Complete
                     </button>
-                  )}
-                </div>
-              </motion.div>
-            );
-          })}
-        </AnimatePresence>
-      </motion.div>
+                  </>
+                )}
+              </div>
+            </motion.div>
+          )
+        })}
+      </AnimatePresence>
+    </motion.div>
+  )
 
+  return (
+    <div className="flex flex-col gap-16">
+      {/* ⚡ ACTIVE SECTION */}
+      <section>
+        <div className="flex items-center gap-3 mb-6">
+          <span className="text-2xl font-bold">⚡</span>
+          <h2 className="text-xl font-bold text-slate-800 dark:text-gray-100">Current Stash</h2>
+        </div>
+        {renderCards(activeResources, false)}
+        {activeResources.length === 0 && (
+          <p className="text-center text-slate-400 py-10 italic">No active tasks. Grab something! 🔒</p>
+        )}
+      </section>
+
+      {/* 🏆 COMPLETED SECTION */}
+      {completedResources.length > 0 && (
+        <section className="pt-10 border-t border-slate-200 dark:border-white/5">
+          <div className="flex items-center gap-3 mb-6">
+            <span className="text-2xl font-bold">🏆</span>
+            <h2 className="text-xl font-bold text-slate-800 dark:text-gray-100">Mastered Vault</h2>
+          </div>
+          {renderCards(completedResources, true)}
+        </section>
+      )}
+
+      {/* 🚀 POPUPS */}
       <AnimatePresence>
         {xpGain && (
-          <motion.div 
-            key="xp-gain-popup"
-            initial={{ opacity: 0, y: 50, scale: 0.3 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
-            className="fixed bottom-10 right-10 z-[100] bg-gradient-to-r from-purple-600 to-blue-500 text-white px-8 py-4 rounded-2xl shadow-[0_0_40px_rgba(139,92,246,0.5)] font-bold text-xl flex items-center gap-3 border border-white/20"
-          >
+          <motion.div key="xp" initial={{ opacity: 0, y: 50, scale: 0.3 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, scale: 0.5 }} className="fixed bottom-10 right-10 z-[100] bg-purple-600 text-white px-8 py-4 rounded-2xl shadow-xl font-bold flex items-center gap-3 border border-white/20">
             <span className="text-2xl">✨</span> +{xpGain} XP gained!
           </motion.div>
         )}
+
+        {newAchievement && (
+          <motion.div key="ach" initial={{ opacity: 0, x: 100, scale: 0.8, rotate: 5 }} animate={{ opacity: 1, x: 0, scale: 1, rotate: 0 }} exit={{ opacity: 0, x: 50, scale: 0.5 }} className="fixed bottom-32 right-10 z-[120] flex items-center gap-4">
+            <div className="absolute inset-0 bg-yellow-500/20 blur-3xl rounded-full" />
+            <div className="relative flex items-center gap-4 bg-[#1a1a24]/90 backdrop-blur-2xl border-2 border-yellow-500/40 p-1 px-6 py-4 rounded-2xl shadow-[0_0_50px_rgba(234,179,8,0.3)]">
+              <motion.div animate={{ rotate: [0, -10, 10, -10, 0] }} transition={{ repeat: Infinity, duration: 2 }} className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-orange-600 rounded-xl flex items-center justify-center text-2xl">🏆</motion.div>
+              <div className="flex flex-col">
+                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-yellow-500">Achievement</span>
+                <h3 className="text-xl font-black text-white tracking-tight">{newAchievement}</h3>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {levelUp && (
+          <motion.div key="lvl" initial={{ opacity: 0, top: -100 }} animate={{ opacity: 1, top: 40 }} exit={{ opacity: 0, top: -100 }} className="fixed left-1/2 -translate-x-1/2 z-[101] bg-yellow-500 text-black px-10 py-5 rounded-full shadow-2xl font-black text-2xl border-4 border-white">
+            🚀 LEVEL UP: {levelUp}! 🎉
+          </motion.div>
+        )}
       </AnimatePresence>
-    </>
+    </div>
   )
 }

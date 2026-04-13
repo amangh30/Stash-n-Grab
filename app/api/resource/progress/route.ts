@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth"
 import { connectDB } from "@/lib/mongodb"
 import UserResource from "@/models/UserResource"
 import User from "@/models/User"
+import { checkAchievements } from "@/lib/achievements" // 🔥 Our modular utility
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions)
@@ -15,6 +16,7 @@ export async function POST(req: Request) {
   await connectDB()
   const { resourceId, progress, status } = await req.json()
 
+  // 1. Update the Resource Progress
   const userResource = await UserResource.findOneAndUpdate(
     {
       userId: session.user.id,
@@ -28,20 +30,40 @@ export async function POST(req: Request) {
     { new: true }
   )
 
-  // Initialize user as null or fetch existing
+  // 2. Fetch User Document
   let user = await User.findById(session.user.id)
+  let newAchievements: string[] = []
 
-  // 🔥 GAMIFICATION LOGIC
-  if (status === "completed" && user) {
+  if (!user) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 })
+  }
+
+  // 🔥 3. GAMIFICATION & ACHIEVEMENT LOGIC
+  // Only trigger this when a resource is marked as "completed"
+  if (status === "completed") {
+    // A. Basic Stats
     user.xp += 50
     user.level = Math.floor(user.xp / 100) + 1
     user.lastActive = new Date()
     user.streak += 1
-    await user.save()
+
+    // B. Calculate total completions for achievement checking
+    const completedCount = await UserResource.countDocuments({
+      userId: user._id,
+      status: "completed"
+    })
+
+    // C. Check Achievements (Utility handles the logic & updates user.achievements array)
+    newAchievements = await checkAchievements(user, completedCount)
   }
 
+  // 4. Save the User (updates XP, Level, Streak, and newly earned Achievements)
+  await user.save()
+
+  // 5. Final Response
   return NextResponse.json({
     userResource,
-    user // Now user is always defined
+    user,             // Includes updated XP and Level
+    newAchievements   // Passed to frontend to trigger the "Ding" and Popup
   })
 }

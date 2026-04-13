@@ -3,6 +3,7 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import ThemeToggle from "./component/ThemeToggle" // Adjust path if needed
 import AuthProvider from "./provider"
+import Footer from "./component/Footer"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -26,6 +27,7 @@ export default function RootLayout({
           <ThemeToggle />
           
           {children}
+          <Footer />
         </AuthProvider>
       </body>
     </html>
