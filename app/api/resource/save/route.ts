@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { connectDB } from "@/lib/mongodb"
 import UserResource from "@/models/UserResource"
+// 🔥 Import the Resource model so Mongoose knows how to populate it
+import Resource from "@/models/Resource" 
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions)
@@ -15,19 +17,25 @@ export async function POST(req: Request) {
 
   const { resourceId } = await req.json()
 
-  const existing = await UserResource.findOne({
+  // 1. Check if it already exists
+  let userResource = await UserResource.findOne({
     userId: session.user.id,
     resourceId,
-  })
+  }).populate("resourceId") // 🔥 Populate here too for consistency
 
-  if (existing) {
-    return NextResponse.json(existing)
+  if (userResource) {
+    return NextResponse.json(userResource)
   }
 
-  const userResource = await UserResource.create({
+  // 2. Create the new link
+  const newUserResource = await UserResource.create({
     userId: session.user.id,
     resourceId,
   })
 
-  return NextResponse.json(userResource)
+  // 🔥 3. THE FIX: Populate the resourceId before returning
+  // This turns the resourceId string into the full object { title, description, link... }
+  const populatedResource = await newUserResource.populate("resourceId")
+
+  return NextResponse.json(populatedResource)
 }

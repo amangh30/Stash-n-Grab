@@ -5,7 +5,6 @@ import { connectDB } from "@/lib/mongodb"
 import User from "@/models/User"
 import UserResource from "@/models/UserResource"
 import ProfileClient from "./ProfileClient"
-
 export default async function ProfilePage() {
   const session = await getServerSession(authOptions)
 
@@ -15,45 +14,28 @@ export default async function ProfilePage() {
 
   await connectDB()
 
-  // Get user document
+  // 1. Fetch data using .lean() to get faster, lighter objects
   const userDoc = await User.findOne({ email: session.user.email }).lean()
   
-  // Convert user document to plain object
-  const user = {
-    ...userDoc,
-    _id: userDoc._id.toString(),
-    // Ensure no ObjectId remains in any nested fields
-    id: userDoc._id.toString(), // Add this if your component expects an 'id' field
-  }
+  const userResourcesDocs = userDoc 
+    ? await UserResource.find({ userId: userDoc._id })
+        .populate({
+          path: "resourceId",
+          populate: {
+            path: "createdBy",
+            select: "name image",
+          },
+        })
+        .lean()
+    : [];
 
-  // Get user resources
-  const userResourcesDocs = await UserResource.find({
-    userId: user._id,
-  })
-    .populate("resourceId")
-    .lean()
+  // 2. THE FIX: The Serialization Nuclear Option 🚀
+  // This recursively converts every _id (including nested createdBy._id) to a string
+  const user = JSON.parse(JSON.stringify(userDoc))
+  const userResources = JSON.parse(JSON.stringify(userResourcesDocs))
 
-  // Convert user resources to plain objects
-  const userResources = userResourcesDocs.map((item: any) => ({
-    ...item,
-    _id: item._id.toString(),
-    userId: item.userId.toString(),
-    resourceId: {
-      ...item.resourceId,
-      _id: item.resourceId._id.toString(),
-      // Convert any other ObjectId fields in resourceId if needed
-    }
-  }))
-
-  // Remove any MongoDB-specific fields from session if needed
-  const plainSession = {
-    ...session,
-    user: {
-      ...session.user,
-      // Ensure no ObjectId is present in session.user
-      id: session.user.id?.toString() || session.user.id,
-    }
-  }
+  // 3. Ensure session is also a plain object
+  const plainSession = JSON.parse(JSON.stringify(session))
 
   return (
     <ProfileClient

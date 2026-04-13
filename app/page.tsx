@@ -8,70 +8,44 @@ import UserResource from "@/models/UserResource"
 import AnimatedBackground from "./component/AnimatedBackground"
 import HomeClient from "./component/HomeClient"
 
+// HomePage.tsx
 export default async function HomePage() {
   const session = await getServerSession(authOptions)
-
   await connectDB()
 
+  const user = session ? {
+    id: session.user.id?.toString(),
+    name: session.user.name,
+    image: session.user.image,
+  } : null
 
+  const resources = await Resource.find().populate("createdBy", "name image").sort({ createdAt: -1 }).lean()
 
-  const user = session
-    ? {
-        id: session.user.id?.toString(),
-        name: session.user.name,
-        image: session.user.image,
-      }
-    : null
-
-  const resources = await Resource.find()
-    .populate("createdBy", "name image")
-    .sort({ createdAt: -1 })
-
-  let userResources: any[] = []
-
+let userResourcesDocs: unknown[] = [];
   if (session) {
-    userResources = await UserResource.find({
-      userId: session.user.id,
-    }).populate("resourceId")
+    // 🔥 Ensure we use the correct ID from the session
+    userResourcesDocs = await UserResource.find({ userId: session.user.id }).populate("resourceId").lean()
   }
 
-    const savedIds = userResources.map(
-    (item: any) => item.resourceId._id.toString()
-  )
+  const resourcesData = JSON.parse(JSON.stringify(resources))
+  const userResourcesData = JSON.parse(JSON.stringify(userResourcesDocs))
+
+  // 🔥 Generate savedIds from the CLEANED data
+  const savedIds = userResourcesData
+    .filter((ur: any) => ur.resourceId)
+    .map((ur: any) => ur.resourceId._id.toString())
 
   return (
-    <div className="min-h-screen relative bg-slate-50 dark:bg-[#0b0b0f] transition-colors duration-500">
-      
+    <div className="min-h-screen relative bg-slate-50 dark:bg-[#0b0b0f]">
       <AnimatedBackground />
-
-      {/* NAV */}
-      <nav className="relative z-20 px-6 py-6 flex justify-end items-center max-w-6xl mx-auto">
-        {!session ? (
-          <Link 
-            href="/login"
-            className="px-6 py-2.5 rounded-full bg-purple-600 hover:bg-purple-700 text-white font-semibold transition-all shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 hover:-translate-y-0.5"
-          >
-            Sign In
-          </Link>
-        ) : (
-          <div className="flex items-center gap-4 bg-white/50 dark:bg-white/5 backdrop-blur-md border border-slate-200 dark:border-white/10 px-4 py-2 rounded-full shadow-sm">
-            <span className="text-sm font-medium text-slate-700 dark:text-gray-200">
-              Welcome back, {session.user?.name?.split(" ")[0] || "Explorer"} 👋
-            </span>
-          </div>
-        )}
-      </nav>
-
-      {/* MAIN */}
+      {/* ... Nav ... */}
       <div className="relative z-10 px-4 md:px-10 pb-12 pt-2 max-w-6xl mx-auto">
-        
-      <HomeClient
-        user={user}
-        resources={JSON.parse(JSON.stringify(resources))}
-        userResources={JSON.parse(JSON.stringify(userResources))}
-        savedIds={savedIds}
-      />
-
+        <HomeClient
+          user={user}
+          resources={resourcesData}
+          userResources={userResourcesData}
+          savedIds={savedIds}
+        />
       </div>
     </div>
   )
