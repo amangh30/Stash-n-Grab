@@ -1,3 +1,4 @@
+// CollectionDetailPage.tsx
 import { connectDB } from "@/lib/mongodb"
 import Collection from "@/models/Collection"
 import Section from "@/models/Section"
@@ -17,10 +18,9 @@ export default async function CollectionDetailPage({ params }: any) {
   const session = await getServerSession(authOptions);
   
   const plainUser = session?.user ? {
-    id: session.user.id?.toString(), // Explicitly convert the ObjectId buffer to a string
+    id: session.user.id?.toString(),
     name: session.user.name,
     image: session.user.image,
-    // Add xp/level/streak if they are in your session object
     xp: session.user.xp,
     level: session.user.level,
     streak: session.user.streak,
@@ -36,6 +36,8 @@ export default async function CollectionDetailPage({ params }: any) {
     })
     .lean();
 
+  if (!col) return notFound();
+
   let userProgress: any[] = [];
   if (session?.user?.id) {
     const resourceIds = col.sections.flatMap((s: any) => s.resources.map((r: any) => r._id));
@@ -48,48 +50,53 @@ export default async function CollectionDetailPage({ params }: any) {
   const plainCol = JSON.parse(JSON.stringify(col));
   const plainProgress = JSON.parse(JSON.stringify(userProgress));
 
-  if (!col) return notFound();
-
   return (
-    <div className="min-h-screen bg-[#0b0b0f] text-white py-20 px-6">
+    // 1. Removed hardcoded bg-[#0b0b0f]. Let global.css body vars handle the background.
+    <div className="min-h-screen py-20 px-6 transition-colors duration-300">
       <div className="max-w-4xl mx-auto">
-        <Link href="/" className="text-gray-500 hover:text-white transition font-bold text-sm flex items-center gap-2 mb-10">
+        
+        {/* 2. Back Link: Slate for Light, Gray/White for Dark */}
+        <Link href="/" className="text-slate-500 hover:text-slate-900 dark:text-gray-400 dark:hover:text-white transition font-bold text-sm flex items-center gap-2 mb-10">
           ← Back to Vault
         </Link>
 
         <header className="mt-10 mb-16">
           <div className="flex flex-wrap items-center gap-4 mb-6">
-            <span className="px-3 py-1 bg-purple-500/20 text-purple-400 text-[10px] font-black uppercase tracking-widest rounded-lg border border-purple-500/30">
+            {/* 3. Module Badge: High contrast purple for Light mode */}
+            <span className="px-3 py-1 bg-purple-100 text-purple-700 border border-purple-200 dark:bg-purple-500/20 dark:text-purple-400 dark:border-purple-500/30 text-[10px] font-black uppercase tracking-widest rounded-lg">
               {col.sections?.length || 0} Modules
             </span>
             
-            {/* 🔥 Rating Badge */}
-            <div className="flex items-center gap-2 px-3 py-1 bg-yellow-500/10 text-yellow-500 text-[10px] font-black uppercase tracking-widest rounded-lg border border-yellow-500/20">
+            {/* 4. Rating Badge: High contrast yellow for Light mode */}
+            <div className="flex items-center gap-2 px-3 py-1 bg-yellow-100 text-yellow-700 border border-yellow-200 dark:bg-yellow-500/10 dark:text-yellow-600 dark:dark:text-yellow-500 dark:border-yellow-500/20 text-[10px] font-black uppercase tracking-widest rounded-lg">
               ⭐ {col.ratings?.average?.toFixed(1) || "0.0"} ({col.ratings?.count || 0})
             </div>
           </div>
 
-          <h1 className="text-5xl font-black tracking-tight mb-4 bg-gradient-to-r from-white to-gray-500 bg-clip-text text-transparent">
+          {/* 5. Title: Slate-900 for Light Mode visibility */}
+          <h1 className="text-5xl font-black tracking-tight mb-4 text-slate-900 dark:text-white bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-gray-500 bg-clip-text text-transparent">
             {col.title}
           </h1>
-          <p className="text-xl text-gray-400 max-w-2xl leading-relaxed">
+          
+          {/* 6. Description: Slate-600 for Light mode */}
+          <p className="text-xl text-slate-600 dark:text-gray-400 max-w-2xl leading-relaxed">
             {col.description}
           </p>
         </header>
 
         <CurriculumViewer 
-        collection={plainCol} 
-        initialProgress={plainProgress} 
-        user={session?.user} 
-      />
-
-        {/* 🔥 DISCUSSION PORTAL SECTION */}
-        <div className="mt-32 pt-16 border-t border-white/5">
-        <DiscussionPortal 
-          collectionId={col._id.toString()} 
-          user={plainUser} // Use the flattened object here
+          collection={plainCol} 
+          initialProgress={plainProgress} 
+          user={session?.user} 
         />
-      </div>
+
+        {/* 7. Discussion Divider: Slate-200 for Light mode */}
+        <div className="mt-32 pt-16 border-t border-slate-200 dark:border-white/5">
+          <DiscussionPortal 
+            collectionId={col._id.toString()} 
+            user={plainUser}
+          />
+        </div>
       </div>
     </div>
   )

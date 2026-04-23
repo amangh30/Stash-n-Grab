@@ -33,7 +33,8 @@ export default function DiscussionPortal({ collectionId, user }: any) {
     <div className="mt-20 space-y-8">
       <div className="flex items-center gap-3">
         <span className="text-2xl">💬</span>
-        <h2 className="text-2xl font-black text-white">Discussion</h2>
+        {/* Title: Slate-900 (Light) / White (Dark) */}
+        <h2 className="text-2xl font-black text-slate-900 dark:text-white">Discussion</h2>
       </div>
 
       {user ? (
@@ -42,17 +43,21 @@ export default function DiscussionPortal({ collectionId, user }: any) {
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="Share your thoughts on this path..."
-            className="w-full bg-white/5 border border-white/10 rounded-2xl p-6 text-white text-sm outline-none focus:border-purple-500/50 transition-all resize-none h-32"
+            /* BG: White (Light) / White-5% (Dark)
+               Text: Slate-900 (Light) / White (Dark)
+               Border: Slate-200 (Light) / White-10% (Dark)
+            */
+            className="w-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-6 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all resize-none h-32 shadow-sm dark:shadow-none"
           />
           <button
             disabled={loading}
-            className="absolute bottom-4 right-4 px-6 py-2 bg-purple-600 text-white text-xs font-bold rounded-xl hover:bg-purple-700 transition-all disabled:opacity-50"
+            className="absolute bottom-4 right-4 px-6 py-2 bg-purple-600 text-white text-xs font-bold rounded-xl hover:bg-purple-700 transition-all shadow-lg shadow-purple-500/20 disabled:opacity-50"
           >
             {loading ? "Posting..." : "Post Comment"}
           </button>
         </form>
       ) : (
-        <p className="text-gray-500 italic text-sm text-center py-4 bg-white/5 rounded-2xl border border-white/5">
+        <p className="text-slate-500 dark:text-gray-500 italic text-sm text-center py-6 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-100 dark:border-white/5">
           Sign in to join the discussion.
         </p>
       )}
@@ -63,21 +68,28 @@ export default function DiscussionPortal({ collectionId, user }: any) {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             key={c._id} 
-            className="flex gap-4 p-6 bg-white/5 rounded-2xl border border-white/5"
+            /* Comment Card: White + Border (Light) / Transparent Dark (Dark) */
+            className="flex gap-4 p-6 bg-white dark:bg-white/5 rounded-2xl border border-slate-100 dark:border-white/5 shadow-sm dark:shadow-none"
           >
             <img 
               src={c.userId?.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${c.userId?.name}`} 
-              className="w-10 h-10 rounded-full" 
+              className="w-10 h-10 rounded-full bg-slate-100 dark:bg-white/10" 
               alt="" 
             />
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-sm font-bold text-white">{c.userId?.name}</span>
-                <span className="text-[10px] text-gray-500">
+                {/* Author Name: Slate-900 (Light) / White (Dark) */}
+                <span className="text-sm font-bold text-slate-900 dark:text-white">
+                  {c.userId?.name}
+                </span>
+                <span className="text-[10px] text-slate-400 dark:text-gray-500">
                   {new Date(c.createdAt).toLocaleDateString()}
                 </span>
               </div>
-              <p className="text-sm text-gray-400 leading-relaxed">{c.text}</p>
+              {/* Comment Text: Slate-600 (Light) / Gray-400 (Dark) */}
+              <p className="text-sm text-slate-600 dark:text-gray-400 leading-relaxed">
+                {c.text}
+              </p>
             </div>
           </motion.div>
         ))}
