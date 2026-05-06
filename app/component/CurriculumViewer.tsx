@@ -3,18 +3,21 @@
 import { useState, useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 
-export default function CurriculumViewer({ collection, initialProgress, user }: any) {
+export default function CurriculumViewer({ collection, initialProgress, passedExams = [], user }: any) {
   const [progress, setProgress] = useState(initialProgress)
+  const [clearedExams, setClearedExams] = useState(passedExams.map((e: any) => e.sectionId.toString()))
+  const [activeExamSection, setActiveExamSection] = useState<any | null>(null)
+  const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({})
+  const [examSubmitted, setExamSubmitted] = useState(false)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
 
-  // Calculate Global Percentage
+  // Progress Bar tracks unique cleared exam section IDs / Total Sections
   const stats = useMemo(() => {
-    const allResources = collection.sections.flatMap((s: any) => s.resources)
-    const total = allResources.length
-    const completed = progress.filter((p: any) => p.status === "completed").length
-    const percent = total > 0 ? Math.round((completed / total) * 100) : 0
-    return { total, completed, percent }
-  }, [progress, collection])
+    const totalSections = collection.sections?.length || 0
+    const completedSections = clearedExams.length
+    const percent = totalSections > 0 ? Math.round((completedSections / totalSections) * 100) : 0
+    return { total: totalSections, completed: completedSections, percent }
+  }, [clearedExams, collection])
 
   const toggleComplete = async (resourceId: string) => {
     if (!user) return alert("Sign in to track progress!")
@@ -26,11 +29,11 @@ export default function CurriculumViewer({ collection, initialProgress, user }: 
     try {
       const res = await fetch("/api/resource/status", {
         method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ resourceId, status: newStatus })
       })
       const updated = await res.json()
       
-      // Update local state
       setProgress((prev: any) => {
         const filtered = prev.filter((p: any) => p.resourceId !== resourceId)
         return [...filtered, updated]
@@ -40,17 +43,53 @@ export default function CurriculumViewer({ collection, initialProgress, user }: 
     }
   }
 
+  const handleExamSubmit = async () => {
+    const questions = activeExamSection.questions
+    let completelyCorrect = true
+
+    questions.forEach((q: any, idx: number) => {
+      if (selectedAnswers[idx] !== q.correctOptionIndex) completelyCorrect = false
+    })
+
+    if (completelyCorrect) {
+      const sectionIdStr = activeExamSection._id.toString()
+      const alreadyCleared = clearedExams.includes(sectionIdStr)
+
+      if (!alreadyCleared) {
+        // 🔥 FIRST TIME CLEAR: Update DB and Progress bar / XP
+        await fetch("/api/sections/exam", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sectionId: activeExamSection._id, passed: true })
+        })
+        
+        setClearedExams([...clearedExams, sectionIdStr])
+        alert("🎉 Section Mastered! Progress Bar Unlocked +50 XP!")
+      } else {
+        // 🔥 RETAKE CLEAR: Skip database write and duplicate XP injection
+        alert("🎉 Exam passed again! Excellent review, your current mastery remains intact.")
+      }
+      
+      setActiveExamSection(null)
+    } else {
+      setExamSubmitted(true)
+      alert("❌ Verification failed. Review the resources and try this section again!")
+    }
+    setSelectedAnswers({})
+  }
+
   return (
     <div className="space-y-12">
-      {/* 🚀 GAMIFIED PROGRESS BAR (Sticky) */}
+      
+      {/* STICKY PROGRESS BAR */}
       <div className="sticky top-24 z-40 bg-[#0b0b0f]/80 backdrop-blur-md p-6 rounded-[2rem] border border-white/10 mb-16 shadow-2xl">
         <div className="flex justify-between items-end mb-4">
           <div>
-            <span className="text-[10px] font-black uppercase tracking-widest text-purple-500">Mastery Progress</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-purple-500">Collection Mastery</span>
             <h3 className="text-2xl font-black text-white">{stats.percent}% Complete</h3>
           </div>
           <div className="text-right">
-            <span className="text-sm font-bold text-gray-500">{stats.completed} / {stats.total} Checkpoints</span>
+            <span className="text-sm font-bold text-gray-500">{stats.completed} / {stats.total} Modules Mastered</span>
           </div>
         </div>
         <div className="w-full bg-white/5 h-3 rounded-full overflow-hidden border border-white/5">
@@ -66,62 +105,130 @@ export default function CurriculumViewer({ collection, initialProgress, user }: 
       <div className="relative">
         <div className="absolute left-[7px] top-2 bottom-2 w-0.5 bg-white/5" />
 
-        {collection.sections?.map((section: any, sIdx: number) => (
-          <div key={section._id} className="relative pl-10 mb-16">
-            <div className="absolute left-0 top-1.5 w-4 h-4 rounded-full bg-[#0b0b0f] border-2 border-purple-500 z-10" />
-            
-            <h2 className="text-xs font-black uppercase tracking-[0.3em] text-purple-500 mb-8 flex items-center gap-4">
-              {sIdx + 1}. {section.title}
-              <div className="h-px flex-1 bg-white/5" />
-            </h2>
+        {collection.sections?.map((section: any, sIdx: number) => {
+          const isExamCleared = clearedExams.includes(section._id.toString())
+          const allResourcesDone = section.resources?.every((res: any) => 
+            progress.find((p: any) => p.resourceId === res._id)?.status === "completed"
+          )
 
-            <div className="grid gap-4">
-              {section.resources?.map((res: any) => {
-                const isDone = progress.find((p: any) => p.resourceId === res._id)?.status === "completed"
+          return (
+            <div key={section._id} className="relative pl-10 mb-16">
+              <div className={`absolute left-0 top-1.5 w-4 h-4 rounded-full border-2 z-10 transition-colors ${isExamCleared ? "bg-emerald-500 border-emerald-400" : "bg-[#0b0b0f] border-purple-500"}`} />
+              
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xs font-black uppercase tracking-[0.3em] text-purple-500">
+                  {sIdx + 1}. {section.title}
+                </h2>
                 
-                return (
-                  <div 
-                    key={res._id}
-                    className={`group relative p-6 rounded-[2rem] border transition-all duration-500 flex items-center gap-6 ${
-                      isDone 
-                      ? "bg-emerald-500/5 border-emerald-500/20 grayscale-[0.5] opacity-60" 
-                      : "bg-white/5 border-white/5 hover:border-purple-500/40"
+                {section.questions?.length > 0 && (
+                  <button
+                    onClick={() => {
+                      setExamSubmitted(false)
+                      setActiveExamSection(section)
+                    }}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition ${
+                      isExamCleared 
+                        ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20" // Unlocked for retakes
+                        : allResourcesDone 
+                        ? "bg-orange-500 text-white border-transparent animate-pulse" 
+                        : "bg-white/5 text-gray-500 border-white/10 hover:border-white/20"
                     }`}
                   >
-                    {/* Completion Toggle */}
-                    <button
-                      onClick={() => toggleComplete(res._id)}
-                      disabled={updatingId === res._id}
-                      className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all border ${
+                    {isExamCleared ? "Retake Exam ✓" : allResourcesDone ? "⚡ Take Exam" : "🔒 Exam Locked"}
+                  </button>
+                )}
+              </div>
+
+              {/* Resources List */}
+              <div className="grid gap-4">
+                {section.resources?.map((res: any) => {
+                  const isDone = progress.find((p: any) => p.resourceId === res._id)?.status === "completed"
+                  
+                  return (
+                    <div 
+                      key={res._id}
+                      className={`group relative p-6 rounded-[2rem] border transition-all duration-500 flex items-center gap-6 ${
                         isDone 
-                        ? "bg-emerald-500 border-emerald-400 text-white" 
-                        : "bg-white/5 border-white/10 text-gray-600 hover:border-purple-500"
+                        ? "bg-emerald-500/5 border-emerald-500/10" 
+                        : "bg-white/5 border-white/5 hover:border-purple-500/40"
                       }`}
                     >
-                      {updatingId === res._id ? "..." : isDone ? "✓" : ""}
-                    </button>
+                      {/* 🔥 Removed `isExamCleared` locking condition so resources can still be reviewed/toggled */}
+                      <button
+                        onClick={() => toggleComplete(res._id)}
+                        disabled={updatingId === res._id}
+                        className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all border ${
+                          isDone 
+                          ? "bg-emerald-500 border-emerald-400 text-white" 
+                          : "bg-white/5 border-white/10 text-gray-600 hover:border-purple-500"
+                        }`}
+                      >
+                        {updatingId === res._id ? "..." : isDone ? "✓" : ""}
+                      </button>
 
-                    <div className="flex-1 min-w-0">
-                      <h3 className={`font-bold text-lg transition-all ${isDone ? "text-emerald-500/80 line-through" : "text-white"}`}>
-                        {res.title}
-                      </h3>
-                      <a href={res.link} target="_blank" className="text-xs text-gray-500 hover:text-purple-400 truncate block mt-1">
-                        {res.link} ↗
-                      </a>
+                      <div className="flex-1 min-w-0">
+                        <h3 className={`font-bold text-lg transition-all ${isDone ? "text-gray-500 line-through" : "text-white"}`}>
+                          {res.title}
+                        </h3>
+                        <a href={res.link} target="_blank" rel="noopener noreferrer" className="text-xs text-gray-500 hover:text-purple-400 truncate block mt-1">
+                          {res.link} ↗
+                        </a>
+                      </div>
                     </div>
-
-                    {isDone && (
-                      <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-emerald-500 font-black text-[10px] uppercase tracking-tighter">
-                        Done +10 XP
-                      </motion.div>
-                    )}
-                  </div>
-                )
-              })}
+                  )
+                })}
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
+
+      {/* MCQ EXAM MODAL */}
+      <AnimatePresence>
+        {activeExamSection && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-xl z-[200] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-[#0f0f13] border border-white/10 w-full max-w-2xl rounded-[2.5rem] p-8 max-h-[85vh] overflow-y-auto custom-scrollbar space-y-6"
+            >
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-orange-500">Gatekeeper Terminal</span>
+                <h3 className="text-2xl font-black text-white">{activeExamSection.title}</h3>
+              </div>
+
+              <div className="space-y-6">
+                {activeExamSection.questions.map((q: any, qIdx: number) => (
+                  <div key={qIdx} className="space-y-3">
+                    <p className="text-sm font-bold text-gray-200">{qIdx + 1}. {q.questionText}</p>
+                    <div className="grid grid-cols-1 gap-2">
+                      {q.options.map((opt: string, oIdx: number) => (
+                        <button
+                          key={oIdx}
+                          onClick={() => setSelectedAnswers({ ...selectedAnswers, [qIdx]: oIdx })}
+                          className={`w-full p-4 rounded-xl text-left text-xs font-medium border transition ${
+                            selectedAnswers[qIdx] === oIdx 
+                              ? "bg-purple-600/20 border-purple-500 text-white" 
+                              : "bg-white/5 border-white/5 text-gray-400 hover:bg-white/10"
+                          }`}
+                        >
+                          {opt}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex justify-end gap-4 pt-4 border-t border-white/5">
+                <button onClick={() => setActiveExamSection(null)} className="text-xs font-bold text-gray-500 hover:text-white">Abort</button>
+                <button onClick={handleExamSubmit} className="px-6 py-2.5 bg-orange-500 text-white text-xs font-black uppercase tracking-widest rounded-xl hover:bg-orange-600 transition">Submit System Verification</button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

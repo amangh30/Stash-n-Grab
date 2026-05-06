@@ -10,9 +10,16 @@ interface ResourceDraft {
   link: string;
 }
 
+interface QuestionDraft {
+  questionText: string;
+  options: string[];
+  correctOptionIndex: number;
+}
+
 interface SectionDraft {
   title: string;
   resources: ResourceDraft[];
+  questions: QuestionDraft[]; // 🔥 Fixed type from [] to QuestionDraft[]
 }
 
 export default function CreateCollectionPage() {
@@ -22,7 +29,7 @@ export default function CreateCollectionPage() {
     title: "",
     description: "",
     sections: [
-      { title: "Introduction", resources: [{ title: "", link: "" }] }
+      { title: "Introduction", resources: [{ title: "", link: "" }], questions: [] }
     ] as SectionDraft[]
   })
 
@@ -30,7 +37,7 @@ export default function CreateCollectionPage() {
   const addSection = () => {
     setForm({
       ...form,
-      sections: [...form.sections, { title: "", resources: [{ title: "", link: "" }] }]
+      sections: [...form.sections, { title: "", resources: [{ title: "", link: "" }], questions: [] }]
     })
   }
 
@@ -63,6 +70,41 @@ export default function CreateCollectionPage() {
     setForm({ ...form, sections: next })
   }
 
+  // --- 🔥 LOGIC: MCQ Questions ---
+  const addQuestion = (sIdx: number) => {
+    const next = [...form.sections]
+    next[sIdx].questions.push({
+      questionText: "",
+      options: ["", "", "", ""],
+      correctOptionIndex: 0
+    })
+    setForm({ ...form, sections: next })
+  }
+
+  const updateQuestionText = (sIdx: number, qIdx: number, val: string) => {
+    const next = [...form.sections]
+    next[sIdx].questions[qIdx].questionText = val
+    setForm({ ...form, sections: next })
+  }
+
+  const updateQuestionOption = (sIdx: number, qIdx: number, oIdx: number, val: string) => {
+    const next = [...form.sections]
+    next[sIdx].questions[qIdx].options[oIdx] = val
+    setForm({ ...form, sections: next })
+  }
+
+  const updateCorrectOption = (sIdx: number, qIdx: number, oIdx: number) => {
+    const next = [...form.sections]
+    next[sIdx].questions[qIdx].correctOptionIndex = oIdx
+    setForm({ ...form, sections: next })
+  }
+
+  const removeQuestion = (sIdx: number, qIdx: number) => {
+    const next = [...form.sections]
+    next[sIdx].questions = next[sIdx].questions.filter((_, i) => i !== qIdx)
+    setForm({ ...form, sections: next })
+  }
+
   // --- SUBMIT ---
   const handlePublish = async () => {
     if (!form.title) return alert("Your collection needs a name!")
@@ -76,8 +118,8 @@ export default function CreateCollectionPage() {
       })
 
       if (res.ok) {
-        router.push("/") // Go home
-        router.refresh() // Sync server data
+        router.push("/") 
+        router.refresh() 
       }
     } catch (err) {
       console.error(err)
@@ -179,16 +221,18 @@ export default function CreateCollectionPage() {
                     </div>
 
                     {/* Resources List */}
-                    <div className="space-y-4 pl-12 border-l-2 border-white/5">
+                    <div className="space-y-4 pl-12 border-l-2 border-white/5 mb-8">
                       {section.resources.map((res, rIdx) => (
                         <motion.div key={rIdx} layout className="flex gap-4 items-center">
                           <input 
                             placeholder="Resource Name"
+                            value={res.title}
                             className="flex-1 bg-white/5 border border-white/5 p-3 rounded-xl text-sm text-white focus:border-purple-500/50 outline-none"
                             onChange={(e) => updateResource(sIdx, rIdx, 'title', e.target.value)}
                           />
                           <input 
                             placeholder="URL"
+                            value={res.link}
                             className="flex-[2] bg-white/5 border border-white/5 p-3 rounded-xl text-sm text-gray-400 focus:border-purple-500/50 outline-none"
                             onChange={(e) => updateResource(sIdx, rIdx, 'link', e.target.value)}
                           />
@@ -208,6 +252,65 @@ export default function CreateCollectionPage() {
                         + Add Link to {section.title || "Section"}
                       </button>
                     </div>
+
+                    {/* 🔥 SECTION MCQ EXAM BUILDER */}
+                    <div className="mt-8 pt-6 border-t border-white/5 space-y-4 pl-12">
+                      <div className="flex justify-between items-center">
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-500">
+                          Section Gatekeeper Exam
+                        </h4>
+                        <button
+                          type="button"
+                          onClick={() => addQuestion(sIdx)}
+                          className="text-[10px] font-black uppercase bg-orange-500/10 text-orange-400 border border-orange-500/20 px-3 py-1.5 rounded-lg hover:bg-orange-500 hover:text-white transition"
+                        >
+                          + Add MCQ Question
+                        </button>
+                      </div>
+
+                      <div className="space-y-4">
+                        {section.questions?.map((q, qIdx) => (
+                          <div key={qIdx} className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl space-y-3 relative group/question">
+                            <div className="flex justify-between items-center gap-4">
+                              <input
+                                placeholder={`Question ${qIdx + 1}: e.g. What is the execution time?`}
+                                value={q.questionText}
+                                className="w-full bg-white/5 border border-white/5 p-3 rounded-xl text-sm text-white outline-none focus:border-orange-500/40"
+                                onChange={(e) => updateQuestionText(sIdx, qIdx, e.target.value)}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => removeQuestion(sIdx, qIdx)}
+                                className="text-gray-500 hover:text-red-400 text-xs font-bold"
+                              >
+                                ✕
+                              </button>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                              {q.options.map((opt, oIdx) => (
+                                <div key={oIdx} className="flex items-center gap-3 bg-black/20 px-3 py-2 rounded-xl border border-white/5 focus-within:border-orange-500/20">
+                                  <input
+                                    type="radio"
+                                    name={`correct-${sIdx}-${qIdx}`}
+                                    checked={q.correctOptionIndex === oIdx}
+                                    onChange={() => updateCorrectOption(sIdx, qIdx, oIdx)}
+                                    className="accent-orange-500 cursor-pointer w-4 h-4"
+                                  />
+                                  <input
+                                    placeholder={`Option ${oIdx + 1}`}
+                                    value={opt}
+                                    className="bg-transparent text-xs text-white outline-none flex-1 placeholder:text-gray-600"
+                                    onChange={(e) => updateQuestionOption(sIdx, qIdx, oIdx, e.target.value)}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
                   </motion.div>
                 ))}
               </AnimatePresence>

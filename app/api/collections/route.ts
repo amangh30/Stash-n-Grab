@@ -28,7 +28,8 @@ export async function POST(req: Request) {
       for (const sectionData of sections) {
         const newSection = await Section.create({
           title: sectionData.title,
-          collectionId: newCollection._id
+          collectionId: newCollection._id,
+          questions: sectionData.questions || [] // 🔥 Save questions configuration array
         })
 
         sectionIds.push(newSection._id)
@@ -66,6 +67,49 @@ export async function POST(req: Request) {
     return NextResponse.json(fullTree)
   } catch (err: any) {
     console.error("Deep Create Error:", err)
+    return NextResponse.json({ error: err.message }, { status: 500 })
+  }
+
+}
+
+export async function GET(req: Request) {
+  await connectDB()
+  
+  const { searchParams } = new URL(req.url)
+  const search = searchParams.get("search") || ""
+  const page = parseInt(searchParams.get("page") || "1")
+  const limit = 9 // Load in grids of 3x3
+  const skip = (page - 1) * limit
+
+  try {
+    let query: any = {}
+    
+    // Efficient text search if a query exists
+    if (search.trim()) {
+      query = { $text: { $search: search } }
+    }
+
+    const collections = await Collection.find(query)
+      .populate({
+        path: 'sections',
+        model: Section,
+        populate: { path: 'resources', model: Resource }
+      })
+      .populate("createdBy", "name image")
+      .sort(search ? { score: { $meta: "textScore" } } : { createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean()
+
+    // Determine if there are more items to fetch
+    const total = await Collection.countDocuments(query)
+    const hasMore = skip + collections.length < total
+
+    return NextResponse.json({
+      collections: JSON.parse(JSON.stringify(collections)),
+      hasMore
+    })
+  } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }

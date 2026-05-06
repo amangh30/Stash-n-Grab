@@ -9,6 +9,7 @@ import { authOptions } from "@/lib/auth"
 import DiscussionPortal from "../../component/DiscussionPortal" 
 import CurriculumViewer from "@/app/component/CurriculumViewer"
 import UserResource from "@/models/UserResource"
+import UserSection from "@/models/UserSection";
 
 export const dynamic = "force-dynamic";
 
@@ -16,16 +17,6 @@ export default async function CollectionDetailPage({ params }: any) {
   const { id } = await params;
   const session = await getServerSession(authOptions);
   
-  const plainUser = session?.user ? {
-    id: session.user.id?.toString(), // Explicitly convert the ObjectId buffer to a string
-    name: session.user.name,
-    image: session.user.image,
-    // Add xp/level/streak if they are in your session object
-    xp: session.user.xp,
-    level: session.user.level,
-    streak: session.user.streak,
-  } : null;
-
   await connectDB()
 
   const col = await Collection.findById(id)
@@ -47,6 +38,28 @@ export default async function CollectionDetailPage({ params }: any) {
 
   const plainCol = JSON.parse(JSON.stringify(col));
   const plainProgress = JSON.parse(JSON.stringify(userProgress));
+
+  const plainUser = session?.user ? {
+    id: session.user.id ? String(session.user.id) : null,
+    name: session.user.name || null,
+    email: session.user.email || null,
+    image: session.user.image || null,
+    xp: session.user.xp || 0,
+    level: session.user.level || 1,
+    streak: session.user.streak || 0,
+  } : null;
+
+  let passedExams: any[] = [];
+  if (session?.user?.id) {
+    const sectionIds = col.sections.map((s: any) => s._id);
+    passedExams = await UserSection.find({
+      userId: session.user.id,
+      sectionId: { $in: sectionIds },
+      examPassed: true
+    }).lean();
+  }
+
+  const plainPassedExams = JSON.parse(JSON.stringify(passedExams));
 
   if (!col) return notFound();
 
@@ -80,7 +93,8 @@ export default async function CollectionDetailPage({ params }: any) {
         <CurriculumViewer 
         collection={plainCol} 
         initialProgress={plainProgress} 
-        user={session?.user} 
+        user={plainUser} 
+        passedExams={plainPassedExams}
       />
 
         {/* 🔥 DISCUSSION PORTAL SECTION */}
