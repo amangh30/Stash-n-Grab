@@ -8,22 +8,20 @@ export default function CurriculumViewer({
   initialProgress, 
   passedExams = [], 
   user, 
-  isStashed: initialStashed // 🔥 Ensure this is passed from page.tsx
+  isStashed: initialStashed 
 }: any) {
   const [progress, setProgress] = useState(initialProgress)
-  const [isStashed, setIsStashed] = useState(initialStashed) // 🔥 Track stash status locally
+  const [isStashed, setIsStashed] = useState(initialStashed) 
   const [clearedExams, setClearedExams] = useState(passedExams.map((e: any) => e.sectionId.toString()))
   const [activeExamSection, setActiveExamSection] = useState<any | null>(null)
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({})
   const [examSubmitted, setExamSubmitted] = useState(false)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
 
-  // Sync state with props if they change
   useEffect(() => {
     setIsStashed(initialStashed)
   }, [initialStashed])
 
-  // Progress Bar tracks unique cleared exam section IDs / Total Sections
   const stats = useMemo(() => {
     const totalSections = collection.sections?.length || 0
     const completedSections = clearedExams.length
@@ -31,18 +29,33 @@ export default function CurriculumViewer({
     return { total: totalSections, completed: completedSections, percent }
   }, [clearedExams, collection])
 
+  // 🔥 NEW: Global XP Updater Function
+  const addXP = async (amount: number, reason: string) => {
+    try {
+      const res = await fetch("/api/user/xp", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount, reason })
+      })
+      const data = await res.json()
+      if (data.leveledUp) {
+        alert(`🎊 LEVEL UP! You reached Level ${data.level}!`)
+      }
+    } catch (err) {
+      console.error("XP sync failed", err)
+    }
+  }
+
   const toggleComplete = async (resourceId: string) => {
     if (!user) return alert("Sign in to track progress! 🔒")
     
     setUpdatingId(resourceId)
     
-    // Find if current resource is done
     const currentStatus = progress.find((p: any) => p.resourceId === resourceId)?.status
     const isNowMarkingDone = currentStatus !== "completed"
     const newStatus = isNowMarkingDone ? "completed" : "not_started"
 
     try {
-      // 1. Update Resource Status
       const res = await fetch("/api/resource/status", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -55,18 +68,19 @@ export default function CurriculumViewer({
         return [...filtered, updated]
       })
 
-      // 2. 🔥 AUTO-GRAB LOGIC: If marking first item done and not stashed yet
+      // 🔥 AUTO-GRAB LOGIC
       if (isNowMarkingDone && !isStashed) {
         const grabRes = await fetch("/api/collections/save", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ collectionId: collection._id })
         })
+        if (grabRes.ok) setIsStashed(true)
+      }
 
-        if (grabRes.ok) {
-          setIsStashed(true)
-          // Silent success - it will now appear in "Active Paths" on the home page
-        }
+      // 🔥 XP INJECTION: Give 10 XP for reading a resource
+      if (isNowMarkingDone) {
+        addXP(10, "Resource Completed")
       }
 
     } catch (err) {
@@ -95,6 +109,9 @@ export default function CurriculumViewer({
           body: JSON.stringify({ sectionId: activeExamSection._id, passed: true })
         })
         
+        // 🔥 XP INJECTION: Give 50 XP for passing an exam
+        addXP(50, "Section Exam Passed")
+
         setClearedExams([...clearedExams, sectionIdStr])
         alert("🎉 Section Mastered! Progress Bar Unlocked +50 XP!")
       } else {
@@ -112,7 +129,6 @@ export default function CurriculumViewer({
   return (
     <div className="space-y-12">
       
-      {/* 🚀 AUTO-GRAB INDICATOR (Optional UI touch) */}
       {!isStashed && user && (
         <motion.div 
           initial={{ opacity: 0, y: -10 }}
@@ -252,7 +268,7 @@ export default function CurriculumViewer({
                           key={oIdx}
                           onClick={() => setSelectedAnswers({ ...selectedAnswers, [qIdx]: oIdx })}
                           className={`w-full p-4 rounded-xl text-left text-xs font-medium border transition ${
-                            selectedAnswers[qIdx] === oIdx 
+                            selectedAnswers[qIdx] === oIdx
                               ? "bg-purple-600/20 border-purple-500 text-white" 
                               : "bg-white/5 border-white/5 text-gray-400 hover:bg-white/10"
                           }`}
