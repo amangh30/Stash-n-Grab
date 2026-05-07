@@ -11,6 +11,7 @@ import DiscussionPortal from "../../component/DiscussionPortal"
 import CurriculumViewer from "@/app/component/CurriculumViewer"
 import UserResource from "@/models/UserResource"
 import UserCollection from "@/models/UserCollection";
+import UserRating from "@/models/UserRating";
 import UserSection from "@/models/UserSection";
 
 export const dynamic = "force-dynamic";
@@ -74,6 +75,15 @@ export default async function CollectionDetailPage({ params }: any) {
     isStashed = !!stashCheck;
   }
 
+  let hasRated = false;
+  if (session?.user?.id) {
+    const ratingCheck = await UserRating.findOne({
+      userId: session.user.id,
+      collectionId: id
+    });
+    hasRated = !!ratingCheck;
+  }
+
   if (!col) return notFound();
 
   return (
@@ -114,6 +124,7 @@ export default async function CollectionDetailPage({ params }: any) {
         collection={plainCol} 
         initialProgress={plainProgress} 
         user={plainUser} 
+        initialHasRated={hasRated}
         passedExams={plainPassedExams}
         isStashed={isStashed}
       />
