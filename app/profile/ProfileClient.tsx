@@ -1,6 +1,7 @@
 "use client"
 
 import { motion, Variants } from "framer-motion"
+import { useRouter } from "next/navigation"
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -19,14 +20,15 @@ const itemVariants: Variants = {
   }
 }
 
-export default function ProfileClient({ session, user, userResources }: any) {
+// 🔥 Changed prop from userResources to userCollections
+export default function ProfileClient({ session, user, userCollections = [] }: any) {
+  const router = useRouter()
+  
   const avatarUrl =
     session?.user?.image ||
     `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name || 'fallback'}`
 
-  const saved = userResources.length
-  const completed = userResources.filter((r: any) => r.status === "completed").length
-  const inProgress = userResources.filter((r: any) => r.status === "in_progress").length
+  const stashedPaths = userCollections.length
 
   return (
     <div className="min-h-screen px-4 md:px-10 py-12 max-w-6xl mx-auto relative z-10">
@@ -81,15 +83,15 @@ export default function ProfileClient({ session, user, userResources }: any) {
           </div>
         </motion.div>
 
-        {/* 2. STATS GRID */}
+        {/* 2. STATS GRID (Updated for Gamification & Collections) */}
         <motion.div 
           variants={containerVariants}
           className="grid grid-cols-1 md:grid-cols-3 gap-6"
         >
           {[
-            { label: "Resources Stashed", value: saved, icon: "📦", color: "from-blue-500 to-cyan-400" },
-            { label: "Mastered Vault", value: completed, icon: "🏆", color: "from-green-500 to-emerald-400" },
-            { label: "Learning Path", value: inProgress, icon: "⚡", color: "from-purple-500 to-pink-400" }
+            { label: "Paths Stashed", value: stashedPaths, icon: "📁", color: "from-blue-500 to-cyan-400" },
+            { label: "Current Level", value: user.level, icon: "⭐", color: "from-green-500 to-emerald-400" },
+            { label: "Total XP Earned", value: user.xp, icon: "⚡", color: "from-purple-500 to-pink-400" }
           ].map((stat, i) => (
             <motion.div
               key={i}
@@ -105,81 +107,87 @@ export default function ProfileClient({ session, user, userResources }: any) {
           ))}
         </motion.div>
 
-        {/* 3. ACHIEVEMENTS SECTION (Refined) */}
-        <motion.div variants={itemVariants} className="space-y-6">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">✨</span>
-            <h2 className="text-2xl font-black text-slate-800 dark:text-white">Achievements</h2>
-          </div>
+        {/* 3. ACHIEVEMENTS SECTION */}
+        {user.achievements && user.achievements.length > 0 && (
+          <motion.div variants={itemVariants} className="space-y-6">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">✨</span>
+              <h2 className="text-2xl font-black text-slate-800 dark:text-white">Achievements</h2>
+            </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {user.achievements?.map((a: string, i: number) => (
-              <motion.div
-                key={i}
-                whileHover={{ scale: 1.05, rotate: 2 }}
-                className="relative p-4 rounded-2xl bg-gradient-to-br from-yellow-400/10 to-orange-500/5 border border-yellow-500/20 flex flex-col items-center text-center gap-2 group"
-              >
-                <div className="absolute inset-0 bg-yellow-500/5 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
-                <span className="text-3xl">🏆</span>
-                <span className="text-[11px] font-black text-yellow-700 dark:text-yellow-500 uppercase tracking-tight">
-                  {a}
-                </span>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              {user.achievements.map((a: string, i: number) => (
+                <motion.div
+                  key={i}
+                  whileHover={{ scale: 1.05, rotate: 2 }}
+                  className="relative p-4 rounded-2xl bg-gradient-to-br from-yellow-400/10 to-orange-500/5 border border-yellow-500/20 flex flex-col items-center text-center gap-2 group"
+                >
+                  <div className="absolute inset-0 bg-yellow-500/5 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <span className="text-3xl">🏆</span>
+                  <span className="text-[11px] font-black text-yellow-700 dark:text-yellow-500 uppercase tracking-tight">
+                    {a}
+                  </span>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        )}
 
-        {/* 4. RESOURCE STASH */}
+        {/* 4. ACTIVE PATHS (Collections Stash) */}
         <motion.div variants={itemVariants} className="space-y-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <span className="text-2xl">📦</span>
-              <h2 className="text-2xl font-bold text-slate-800 dark:text-white">My Stash</h2>
+              <span className="text-2xl">📚</span>
+              <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Active Paths</h2>
             </div>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {userResources.map((item: any) => (
-              <motion.div
-                key={item._id}
-                layout
-                whileHover={{ y: -8 }}
-                className="p-6 rounded-3xl bg-white/60 dark:bg-purple-900/10 backdrop-blur-md border border-slate-200 dark:border-purple-500/20 hover:shadow-2xl transition-all relative overflow-hidden group"
-              >
-                <div className="absolute -right-10 -top-10 w-32 h-32 bg-purple-400/10 rounded-full blur-3xl pointer-events-none" />
-                
-                <div className="flex justify-between items-start mb-4">
-                   <div className="px-3 py-1 bg-purple-100 dark:bg-purple-500/20 text-[10px] font-black uppercase text-purple-600 dark:text-purple-400 rounded-lg border border-purple-200 dark:border-purple-500/30">
-                    {item.status.replace("_", " ")}
-                  </div>
-                </div>
+          {stashedPaths === 0 ? (
+            <div className="p-10 text-center rounded-[2rem] border border-dashed border-slate-300 dark:border-white/10 bg-white/50 dark:bg-white/5">
+              <p className="text-slate-500 dark:text-gray-400 font-medium">You haven't stashed any paths yet. Explore the vault!</p>
+            </div>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {userCollections.map((item: any) => {
+                const col = item.collectionId
+                if (!col) return null // Safe guard in case a collection was deleted
 
-                <h3 className="font-bold text-lg text-slate-800 dark:text-gray-100 group-hover:text-purple-600 transition-colors">
-                  {item.resourceId.title}
-                </h3>
+                return (
+                  <motion.div
+                    key={item._id}
+                    layout
+                    whileHover={{ y: -5 }}
+                    className="p-8 rounded-[2rem] bg-white/60 dark:bg-white/5 backdrop-blur-md border border-slate-200 dark:border-white/10 hover:shadow-2xl hover:border-purple-500/30 transition-all flex flex-col justify-between relative overflow-hidden group"
+                  >
+                    <div className="absolute -right-10 -top-10 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl pointer-events-none group-hover:bg-purple-500/20 transition-all" />
+                    
+                    <div className="relative z-10 flex-1">
+                      <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-500/20 flex items-center justify-center text-xl mb-6">
+                        📁
+                      </div>
 
-                <p className="text-sm text-slate-500 dark:text-gray-400 mt-2 line-clamp-2 leading-relaxed">
-                  {item.resourceId.description}
-                </p>
+                      <h3 className="font-black text-xl text-slate-900 dark:text-white group-hover:text-purple-500 transition-colors tracking-tight">
+                        {col.title}
+                      </h3>
 
-                {/* Progress Bar */}
-                <div className="mt-6">
-                  <div className="flex justify-between text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">
-                    <span>Mastery</span>
-                    <span>{item.progress}%</span>
-                  </div>
-                  <div className="w-full bg-slate-200 dark:bg-white/5 h-1.5 rounded-full overflow-hidden">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${item.progress}%` }}
-                      transition={{ type: "spring", stiffness: 100, damping: 20 }}
-                      className="bg-gradient-to-r from-purple-500 to-blue-500 h-full rounded-full"
-                    />
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
+                      <p className="text-sm text-slate-500 dark:text-gray-400 mt-2 line-clamp-2 leading-relaxed">
+                        {col.description}
+                      </p>
+                    </div>
+
+                    <div className="mt-8 pt-6 border-t border-slate-100 dark:border-white/5 relative z-10">
+                      <button
+                        onClick={() => router.push(`/collection/${col._id}`)}
+                        className="w-full py-3 text-xs font-black uppercase tracking-widest bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl hover:bg-purple-600 dark:hover:bg-purple-500 hover:text-white transition-all shadow-lg active:scale-95"
+                      >
+                        Continue Path ↗
+                      </button>
+                    </div>
+                  </motion.div>
+                )
+              })}
+            </div>
+          )}
         </motion.div>
       </motion.div>
     </div>

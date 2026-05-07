@@ -31,20 +31,30 @@ export default function CurriculumViewer({
 
   // 🔥 NEW: Global XP Updater Function
   const addXP = async (amount: number, reason: string) => {
-    try {
-      const res = await fetch("/api/user/xp", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount, reason })
-      })
-      const data = await res.json()
-      if (data.leveledUp) {
-        alert(`🎊 LEVEL UP! You reached Level ${data.level}!`)
-      }
-    } catch (err) {
-      console.error("XP sync failed", err)
+  try {
+    const res = await fetch("/api/user/xp", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ amount, reason })
+    })
+    const data = await res.json()
+
+    // 1. Level Up Alert
+    if (data.leveledUp) {
+      alert(`🎊 LEVEL UP! You reached Level ${data.level}!`)
     }
+
+    // 2. 🔥 Achievement Unlock Alert
+    if (data.newlyUnlocked && data.newlyUnlocked.length > 0) {
+      data.newlyUnlocked.forEach((achId: string) => {
+        // You could use a fancy Toast here, but alert works for now!
+        alert(`🏆 ACHIEVEMENT UNLOCKED: ${achId}! Check your profile to see your new trophy.`)
+      })
+    }
+  } catch (err) {
+    console.error("XP sync failed", err)
   }
+}
 
   const toggleComplete = async (resourceId: string) => {
     if (!user) return alert("Sign in to track progress! 🔒")
@@ -125,6 +135,8 @@ export default function CurriculumViewer({
     }
     setSelectedAnswers({})
   }
+
+  
 
   return (
     <div className="space-y-12">

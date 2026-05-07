@@ -3,8 +3,9 @@ import { authOptions } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { connectDB } from "@/lib/mongodb"
 import User from "@/models/User"
-import UserResource from "@/models/UserResource"
+import UserCollection from "@/models/UserCollection"
 import ProfileClient from "./ProfileClient"
+
 export default async function ProfilePage() {
   const session = await getServerSession(authOptions)
 
@@ -14,34 +15,26 @@ export default async function ProfilePage() {
 
   await connectDB()
 
-  // 1. Fetch data using .lean() to get faster, lighter objects
+  // 1. Fetch the gamified user data
   const userDoc = await User.findOne({ email: session.user.email }).lean()
-  
-  const userResourcesDocs = userDoc 
-    ? await UserResource.find({ userId: userDoc._id })
-        .populate({
-          path: "resourceId",
-          populate: {
-            path: "createdBy",
-            select: "name image",
-          },
-        })
-        .lean()
-    : [];
 
-  // 2. THE FIX: The Serialization Nuclear Option 🚀
-  // This recursively converts every _id (including nested createdBy._id) to a string
-  const user = JSON.parse(JSON.stringify(userDoc))
-  const userResources = JSON.parse(JSON.stringify(userResourcesDocs))
+  // 2. Fetch the stashed collections
+  const userCollectionsDocs = await UserCollection.find({ userId: userDoc?._id })
+    .populate("collectionId", "title description")
+    .sort({ createdAt: -1 })
+    .lean()
 
-  // 3. Ensure session is also a plain object
+  // 3. THE FIX: Sanitize EVERYTHING 🚀
+  // We stringify/parse the session to flatten that 'id: { buffer: ... }' into a simple string
   const plainSession = JSON.parse(JSON.stringify(session))
+  const plainUser = JSON.parse(JSON.stringify(userDoc))
+  const plainCollections = JSON.parse(JSON.stringify(userCollectionsDocs))
 
   return (
-    <ProfileClient
-      session={plainSession}
-      user={user}
-      userResources={userResources}
+    <ProfileClient 
+      session={plainSession} 
+      user={plainUser} 
+      userCollections={plainCollections} 
     />
   )
 }
