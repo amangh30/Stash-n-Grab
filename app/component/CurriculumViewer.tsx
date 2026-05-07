@@ -1,15 +1,27 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 
-export default function CurriculumViewer({ collection, initialProgress, passedExams = [], user }: any) {
+export default function CurriculumViewer({ 
+  collection, 
+  initialProgress, 
+  passedExams = [], 
+  user, 
+  isStashed: initialStashed // 🔥 Ensure this is passed from page.tsx
+}: any) {
   const [progress, setProgress] = useState(initialProgress)
+  const [isStashed, setIsStashed] = useState(initialStashed) // 🔥 Track stash status locally
   const [clearedExams, setClearedExams] = useState(passedExams.map((e: any) => e.sectionId.toString()))
   const [activeExamSection, setActiveExamSection] = useState<any | null>(null)
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({})
   const [examSubmitted, setExamSubmitted] = useState(false)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
+
+  // Sync state with props if they change
+  useEffect(() => {
+    setIsStashed(initialStashed)
+  }, [initialStashed])
 
   // Progress Bar tracks unique cleared exam section IDs / Total Sections
   const stats = useMemo(() => {
@@ -20,13 +32,17 @@ export default function CurriculumViewer({ collection, initialProgress, passedEx
   }, [clearedExams, collection])
 
   const toggleComplete = async (resourceId: string) => {
-    if (!user) return alert("Sign in to track progress!")
+    if (!user) return alert("Sign in to track progress! 🔒")
     
     setUpdatingId(resourceId)
-    const isCompleted = progress.find((p: any) => p.resourceId === resourceId)?.status === "completed"
-    const newStatus = isCompleted ? "not_started" : "completed"
+    
+    // Find if current resource is done
+    const currentStatus = progress.find((p: any) => p.resourceId === resourceId)?.status
+    const isNowMarkingDone = currentStatus !== "completed"
+    const newStatus = isNowMarkingDone ? "completed" : "not_started"
 
     try {
+      // 1. Update Resource Status
       const res = await fetch("/api/resource/status", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -38,6 +54,23 @@ export default function CurriculumViewer({ collection, initialProgress, passedEx
         const filtered = prev.filter((p: any) => p.resourceId !== resourceId)
         return [...filtered, updated]
       })
+
+      // 2. 🔥 AUTO-GRAB LOGIC: If marking first item done and not stashed yet
+      if (isNowMarkingDone && !isStashed) {
+        const grabRes = await fetch("/api/collections/save", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ collectionId: collection._id })
+        })
+
+        if (grabRes.ok) {
+          setIsStashed(true)
+          // Silent success - it will now appear in "Active Paths" on the home page
+        }
+      }
+
+    } catch (err) {
+      console.error("Update failed", err)
     } finally {
       setUpdatingId(null)
     }
@@ -56,7 +89,6 @@ export default function CurriculumViewer({ collection, initialProgress, passedEx
       const alreadyCleared = clearedExams.includes(sectionIdStr)
 
       if (!alreadyCleared) {
-        // 🔥 FIRST TIME CLEAR: Update DB and Progress bar / XP
         await fetch("/api/sections/exam", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -66,8 +98,7 @@ export default function CurriculumViewer({ collection, initialProgress, passedEx
         setClearedExams([...clearedExams, sectionIdStr])
         alert("🎉 Section Mastered! Progress Bar Unlocked +50 XP!")
       } else {
-        // 🔥 RETAKE CLEAR: Skip database write and duplicate XP injection
-        alert("🎉 Exam passed again! Excellent review, your current mastery remains intact.")
+        alert("🎉 Exam passed again! Excellent review.")
       }
       
       setActiveExamSection(null)
@@ -81,6 +112,20 @@ export default function CurriculumViewer({ collection, initialProgress, passedEx
   return (
     <div className="space-y-12">
       
+      {/* 🚀 AUTO-GRAB INDICATOR (Optional UI touch) */}
+      {!isStashed && user && (
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-4 bg-purple-600/10 border border-purple-500/20 rounded-2xl flex items-center gap-3"
+        >
+          <span className="text-xl">✨</span>
+          <p className="text-xs font-medium text-purple-400">
+            Checking a resource will automatically add this path to your <span className="font-bold">Active Paths</span>.
+          </p>
+        </motion.div>
+      )}
+
       {/* STICKY PROGRESS BAR */}
       <div className="sticky top-24 z-40 bg-[#0b0b0f]/80 backdrop-blur-md p-6 rounded-[2rem] border border-white/10 mb-16 shadow-2xl">
         <div className="flex justify-between items-end mb-4">
@@ -128,7 +173,7 @@ export default function CurriculumViewer({ collection, initialProgress, passedEx
                     }}
                     className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition ${
                       isExamCleared 
-                        ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20" // Unlocked for retakes
+                        ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20" 
                         : allResourcesDone 
                         ? "bg-orange-500 text-white border-transparent animate-pulse" 
                         : "bg-white/5 text-gray-500 border-white/10 hover:border-white/20"
@@ -153,7 +198,6 @@ export default function CurriculumViewer({ collection, initialProgress, passedEx
                         : "bg-white/5 border-white/5 hover:border-purple-500/40"
                       }`}
                     >
-                      {/* 🔥 Removed `isExamCleared` locking condition so resources can still be reviewed/toggled */}
                       <button
                         onClick={() => toggleComplete(res._id)}
                         disabled={updatingId === res._id}

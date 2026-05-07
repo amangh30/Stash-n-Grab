@@ -10,6 +10,7 @@ import { authOptions } from "@/lib/auth"
 import DiscussionPortal from "../../component/DiscussionPortal" 
 import CurriculumViewer from "@/app/component/CurriculumViewer"
 import UserResource from "@/models/UserResource"
+import UserCollection from "@/models/UserCollection";
 import UserSection from "@/models/UserSection";
 
 export const dynamic = "force-dynamic";
@@ -64,6 +65,15 @@ export default async function CollectionDetailPage({ params }: any) {
 
   const plainPassedExams = JSON.parse(JSON.stringify(passedExams));
 
+  let isStashed = false;
+  if (session?.user?.id) {
+    const stashCheck = await UserCollection.findOne({ 
+      userId: session.user.id, 
+      collectionId: id 
+    });
+    isStashed = !!stashCheck;
+  }
+
   if (!col) return notFound();
 
   return (
@@ -105,6 +115,7 @@ export default async function CollectionDetailPage({ params }: any) {
         initialProgress={plainProgress} 
         user={plainUser} 
         passedExams={plainPassedExams}
+        isStashed={isStashed}
       />
 
         {/* 7. Discussion Divider: Slate-200 for Light mode */}
