@@ -25,19 +25,31 @@ interface SectionDraft {
 export default function CreateCollectionPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  // Update Initial State
   const [form, setForm] = useState({
     title: "",
     description: "",
     sections: [
-      { title: "Introduction", resources: [{ title: "", link: "" }], questions: [] }
+      { 
+        title: "Introduction", 
+        resources: [{ title: "", link: "" }], 
+        questions: [{ questionText: "", options: ["", "", "", ""], correctOptionIndex: 0 }] // 🔥 Added initial question
+      }
     ] as SectionDraft[]
   })
 
-  // --- LOGIC: Sections ---
+  // Update addSection function
   const addSection = () => {
     setForm({
       ...form,
-      sections: [...form.sections, { title: "", resources: [{ title: "", link: "" }], questions: [] }]
+      sections: [
+        ...form.sections, 
+        { 
+          title: "", 
+          resources: [{ title: "", link: "" }], 
+          questions: [{ questionText: "", options: ["", "", "", ""], correctOptionIndex: 0 }] // 🔥 Added initial question
+        }
+      ]
     })
   }
 
@@ -100,33 +112,86 @@ export default function CreateCollectionPage() {
   }
 
   const removeQuestion = (sIdx: number, qIdx: number) => {
-    const next = [...form.sections]
-    next[sIdx].questions = next[sIdx].questions.filter((_, i) => i !== qIdx)
-    setForm({ ...form, sections: next })
-  }
+      const next = [...form.sections];
+      if (next[sIdx].questions.length <= 1) {
+        return alert("Every section must have at least one gatekeeper question.");
+      }
+      next[sIdx].questions = next[sIdx].questions.filter((_, i) => i !== qIdx);
+      setForm({ ...form, sections: next });
+    };
 
   // --- SUBMIT ---
   const handlePublish = async () => {
-    if (!form.title) return alert("Your collection needs a name!")
-    setLoading(true)
+    // 1. Root Validation
+    if (!form.title.trim()) return alert("Your collection needs a title!");
+    if (!form.description.trim()) return alert("Please add a description!");
+    if (form.sections.length === 0) return alert("Add at least one section!");
 
+    // 2. Deep Validation
+    for (let i = 0; i < form.sections.length; i++) {
+      const section = form.sections[i];
+      const sName = `Section ${i + 1} ("${section.title || 'Untitled'}")`;
+
+      if (!section.title.trim()) return alert(`${sName} is missing a title!`);
+      
+      // Resources Check
+      if (!section.resources?.length) return alert(`${sName} needs at least one resource.`);
+      const invalidRes = section.resources.some(r => !r.title.trim() || !r.link.trim());
+      if (invalidRes) return alert(`All resources in ${sName} must have a title and a URL.`);
+
+      // 🔥 Mandatory Exam Check
+      if (!section.questions?.length) {
+        return alert(`${sName} requires a Gatekeeper Exam. Add at least one question!`);
+      }
+
+      // Questions Content Check
+      for (let j = 0; j < section.questions.length; j++) {
+        const q = section.questions[j];
+        const qName = `Question ${j + 1} in ${sName}`;
+
+        if (!q.questionText.trim()) return alert(`${qName} text is empty!`);
+        if (q.options.some(opt => !opt.trim())) return alert(`${qName} has empty options!`);
+      }
+    }
+
+    setLoading(true);
     try {
       const res = await fetch("/api/collections", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form)
-      })
+      });
 
       if (res.ok) {
-        router.push("/") 
-        router.refresh() 
+        router.push("/");
+        router.refresh();
+      } else {
+        const errorData = await res.json();
+        alert(errorData.message || "Failed to publish.");
       }
     } catch (err) {
-      console.error(err)
+      console.error(err);
+      alert("Network error. Please try again.");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
+
+  const isFormValid = 
+    form.title.trim() !== "" && 
+    form.description.trim() !== "" &&
+    form.sections.length > 0 &&
+    form.sections.every(s => 
+      s.title.trim() !== "" && 
+      s.resources.length > 0 &&
+      s.resources.every(r => r.title.trim() !== "" && r.link.trim() !== "") &&
+      // 🔥 Mandatory Exam Check: Must have at least 1 question, and all questions must be filled
+      s.questions.length > 0 && 
+      s.questions.every(q => 
+        q.questionText.trim() !== "" && 
+        q.options.every(o => o.trim() !== "")
+      )
+    );
 
   return (
     <div className="min-h-screen bg-[#0b0b0f] text-white">
@@ -144,10 +209,14 @@ export default function CreateCollectionPage() {
           <div className="flex items-center gap-4">
             <button 
               onClick={handlePublish}
-              disabled={loading}
-              className="px-6 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-blue-500 text-white font-black text-sm shadow-lg shadow-purple-500/20 hover:scale-105 active:scale-95 transition disabled:opacity-50"
+              disabled={loading || !isFormValid}
+              className={`px-6 py-2 rounded-xl font-black text-sm transition transition-all duration-300
+                ${isFormValid 
+                  ? "bg-gradient-to-r from-purple-600 to-blue-500 text-white shadow-lg shadow-purple-500/20 hover:scale-105 active:scale-95" 
+                  : "bg-white/5 text-gray-500 cursor-not-allowed border border-white/10"}
+                ${loading ? "opacity-50" : "opacity-100"}`}
             >
-              {loading ? "Stashing..." : "Publish Collection"}
+              {loading ? "Stashing..." : isFormValid ? "Publish Collection" : "Complete All Fields"}
             </button>
           </div>
         </div>
@@ -281,7 +350,8 @@ export default function CreateCollectionPage() {
                               <button
                                 type="button"
                                 onClick={() => removeQuestion(sIdx, qIdx)}
-                                className="text-gray-500 hover:text-red-400 text-xs font-bold"
+                                // 🔥 Hide remove button if it's the only question left
+                                className={`${section.questions.length <= 1 ? 'hidden' : 'flex'} text-gray-500 hover:text-red-400 text-xs font-bold`}
                               >
                                 ✕
                               </button>

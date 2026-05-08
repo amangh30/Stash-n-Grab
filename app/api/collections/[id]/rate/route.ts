@@ -69,3 +69,84 @@ export async function POST(req: Request, props: { params: Promise<{ id: string }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
+
+export async function GET(req: Request) {
+  await connectDB()
+  const { searchParams } = new URL(req.url)
+  const search = searchParams.get("search") || ""
+  const page = parseInt(searchParams.get("page") || "1")
+  const limit = 9
+  const skip = (page - 1) * limit
+
+  // Constants for Weighted Score
+  const m = 5;      // Minimum ratings to be weighted heavily
+  const C = 3.5;    // Global average across the site (fallback)
+
+  try {
+    const pipeline: any[] = []
+
+    // 1. Text Search Match
+    if (search.trim()) {
+      pipeline.push({ 
+        $match: { $text: { $search: search } } 
+      })
+    } else {
+      pipeline.push({ $match: {} })
+    }
+
+    // 2. Add Weighted Score Field
+    // Formula: ( (avg * count) + (C * m) ) / (count + m)
+    pipeline.push({
+      $addFields: {
+        weightedScore: {
+          $divide: [
+            {
+              $add: [
+                { $multiply: [{ $ifNull: ["$ratings.average", 0] }, { $ifNull: ["$ratings.count", 0] }] },
+                (C * m)
+              ]
+            },
+            { $add: [{ $ifNull: ["$ratings.count", 0] }, m] }
+          ]
+        },
+        // Capture text score if searching
+        searchScore: search ? { $meta: "textScore" } : 0
+      }
+    })
+
+    // 3. Sorting Logic
+    if (search) {
+      // Search relevance first, then weighted quality
+      pipeline.push({ $sort: { searchScore: -1, weightedScore: -1 } })
+    } else {
+      // Quality and freshness
+      pipeline.push({ $sort: { weightedScore: -1, createdAt: -1 } })
+    }
+
+    // 4. Pagination & Populate
+    pipeline.push({ $skip: skip })
+    pipeline.push({ $limit: limit })
+
+    // Execute Aggregation
+    const collections = await Collection.aggregate(pipeline)
+
+    // Manual population (since .populate() doesn't work directly on aggregate results)
+    // You can also use $lookup in the pipeline, but this is simpler for now:
+    const populated = await Collection.populate(collections, { 
+      path: "sections createdBy",
+      select: "title name image"
+    })
+
+    // 5. Get Total Count for hasMore
+    const totalCount = await Collection.countDocuments(search ? { $text: { $search: search } } : {})
+    const hasMore = skip + collections.length < totalCount
+
+    return NextResponse.json({ 
+      collections: JSON.parse(JSON.stringify(populated)), 
+      hasMore 
+    })
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 })
+  }
+}
