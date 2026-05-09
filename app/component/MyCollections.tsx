@@ -4,21 +4,49 @@ import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useRouter } from "next/navigation"
 
-// Animation constants to match your other components
 const SOFT_SPRING = { type: "spring", stiffness: 300, damping: 30, mass: 0.8 }
 const ENTRANCE_SPRING = { type: "spring", stiffness: 100, damping: 20, mass: 0.5 }
 
-export default function MyCollections({ userCollections, setUserCollections }: any) {
+export default function MyCollections({ userCollections, setUserCollections, notify }: any) {
   const router = useRouter()
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState<string | null>(null)
+
+  // 🔥 NEW: Unstash Handler
+  const handleUnstash = async (e: React.MouseEvent, collectionId: string) => {
+    e.stopPropagation(); // Prevent card clicks
+    if (isDeleting) return;
+
+    setIsDeleting(collectionId);
+    try {
+      const res = await fetch("/api/collections/unstash", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ collectionId }),
+      });
+
+      if (res.ok) {
+        // Update local state to trigger the Framer Motion exit animation
+        setUserCollections((prev: any) => 
+          prev.filter((item: any) => item.collectionId._id !== collectionId)
+        );
+        if (notify) notify("Path removed from your vault");
+      } else {
+        const data = await res.json();
+        if (notify) notify(data.error || "Failed to unstash", "error");
+      }
+    } catch (err) {
+      if (notify) notify("Connection error", "error");
+    } finally {
+      setIsDeleting(null);
+    }
+  };
 
   return (
     <motion.div 
       initial="hidden"
       animate="show"
-      variants={{
-        show: { transition: { staggerChildren: 0.1 } }
-      }}
+      variants={{ show: { transition: { staggerChildren: 0.1 } } }}
       className="grid grid-cols-1 md:grid-cols-2 gap-6"
     >
       <AnimatePresence mode="popLayout">
@@ -28,6 +56,8 @@ export default function MyCollections({ userCollections, setUserCollections }: a
 
           const collectionUrl = `/collection/${col._id}`
           const isExpanded = expandedId === item._id
+          // 🔥 Constraint: Progress must be 0 to unstash
+          const canUnstash = item.progress === 0;
 
           return (
             <motion.div
@@ -35,12 +65,12 @@ export default function MyCollections({ userCollections, setUserCollections }: a
               key={item._id}
               variants={{
                 hidden: { opacity: 0, y: 20, scale: 0.95 },
-                show: { opacity: 1, y: 0, scale: 1, transition: ENTRANCE_SPRING }
+                show: { opacity: 1, y: 0, scale: 1, transition: ENTRANCE_SPRING },
+                exit: { opacity: 0, scale: 0.9, transition: { duration: 0.2 } } // Smooth exit
               }}
               whileHover={{ y: -5, transition: SOFT_SPRING }}
               className="bg-white border border-slate-200 dark:bg-[#12121a] dark:border-white/5 backdrop-blur-xl rounded-[2.5rem] p-8 hover:shadow-2xl hover:shadow-purple-500/10 transition-colors group relative overflow-hidden"
             >
-              {/* Subtle Background Glow */}
               <div className="absolute -right-10 -top-10 w-40 h-40 bg-purple-500/5 dark:bg-purple-500/10 rounded-full blur-3xl group-hover:bg-purple-600/10 transition-all pointer-events-none" />
 
               {/* Card Header */}
@@ -55,11 +85,9 @@ export default function MyCollections({ userCollections, setUserCollections }: a
                   <span className="text-[10px] font-black uppercase tracking-[0.2em] text-purple-600 dark:text-purple-500 block mb-1">
                     Path Mastery
                   </span>
-                  <div className="flex items-center justify-end gap-2">
-                    <p className="text-3xl font-black text-slate-900 dark:text-white tabular-nums tracking-tighter">
-                      {item.progress}%
-                    </p>
-                  </div>
+                  <p className="text-3xl font-black text-slate-900 dark:text-white tabular-nums tracking-tighter">
+                    {item.progress}%
+                  </p>
                 </div>
               </div>
 
@@ -71,45 +99,43 @@ export default function MyCollections({ userCollections, setUserCollections }: a
                 {col.description}
               </p>
 
-              {/* Progress Bar Container */}
+              {/* Progress Bar */}
               <div className="relative w-full bg-slate-200 dark:bg-white/5 h-3 rounded-full overflow-hidden mb-8 border border-slate-300/40 dark:border-white/5 p-[2px]">
                 <motion.div 
                   initial={{ width: 0 }}
                   animate={{ width: `${item.progress}%` }}
-                  transition={{ duration: 1, ease: "circOut" }}
-                  className="relative h-full bg-gradient-to-r from-purple-600 via-blue-500 to-emerald-500 rounded-full shadow-[0_0_15px_rgba(147,51,234,0.4)]"
-                >
-                  {/* Animated shine effect on the progress bar */}
-                  <motion.div 
-                    animate={{ x: ['-100%', '200%'] }}
-                    transition={{ repeat: Infinity, duration: 3, ease: "linear" }}
-                    className="absolute inset-0 w-1/2 bg-gradient-to-r from-transparent via-white/20 to-transparent"
-                  />
-                </motion.div>
+                  className="relative h-full bg-gradient-to-r from-purple-600 via-blue-500 to-emerald-500 rounded-full"
+                />
               </div>
 
               {/* Footer Actions */}
               <div className="flex gap-3 relative z-10">
                 <button 
                   onClick={() => setExpandedId(isExpanded ? null : item._id)}
-                  className={`flex-1 py-3.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all active:scale-95 border ${
-                    isExpanded 
-                      ? "bg-slate-100 dark:bg-white/10 border-slate-300 dark:border-white/20 text-slate-900 dark:text-white" 
-                      : "bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-700 dark:text-gray-400 hover:bg-slate-100 dark:hover:bg-white/10"
-                  }`}
+                  className="flex-1 py-3.5 rounded-xl text-[11px] font-black uppercase tracking-widest bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-gray-400 hover:bg-slate-100 dark:hover:bg-white/10 transition-all"
                 >
                   {isExpanded ? "Close" : "Inspect Nodes"}
                 </button>
 
+                {/* 🔥 UNSTASH BUTTON: Only shown if progress is 0 */}
+                {canUnstash && (
+                  <button 
+                    onClick={(e) => handleUnstash(e, col._id)}
+                    disabled={isDeleting === col._id}
+                    className="px-5 py-3.5 rounded-xl border border-red-500/20 bg-red-500/5 text-red-500 text-[11px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all active:scale-95"
+                  >
+                    {isDeleting === col._id ? "..." : "✕"}
+                  </button>
+                )}
+
                 <button 
                   onClick={() => router.push(collectionUrl)}
-                  className="flex-[1.5] py-3.5 rounded-xl bg-purple-600 text-white text-[11px] font-black uppercase tracking-widest shadow-lg shadow-purple-500/25 hover:bg-purple-500 hover:-translate-y-0.5 transition-all active:scale-95"
+                  className="flex-[2] py-3.5 rounded-xl bg-purple-600 text-white text-[11px] font-black uppercase tracking-widest shadow-lg shadow-purple-500/25 hover:bg-purple-500 hover:-translate-y-0.5 transition-all active:scale-95"
                 >
                   Resume Journey
                 </button>
               </div>
 
-              {/* Nested Resource Preview (Accordion) */}
               <AnimatePresence>
                 {isExpanded && (
                   <motion.div 

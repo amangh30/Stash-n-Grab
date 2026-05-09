@@ -138,62 +138,59 @@ export default function CurriculumViewer({
     }
   }
 
-  // ================= RESOURCE TOGGLE =================
+  // ================= RESOURCE TOGGLE (STREAK TRIGGER) =================
   const toggleComplete = async (resourceId: string) => {
-    if (!user) {
-      return notify("Sign in to track progress! 🔒", "error")
-    }
+    if (!user) return notify("Sign in to track progress! 🔒", "error");
+    if (updatingId) return;
 
-    if (updatingId) return
+    setUpdatingId(resourceId);
 
-    setUpdatingId(resourceId)
-
-    const current = progress.find(
-      (p: any) => p.resourceId === resourceId
-    )
-
-    const isNowDone = current?.status !== "completed"
+    // 1. Find the current status to determine the next state
+    const current = progress.find((p: any) => p.resourceId === resourceId);
+    
+    // 🔥 THE FIX: Ensure isNowDone is defined here so it's available in the try block
+    const isNowDone = current?.status !== "completed";
 
     try {
       const res = await fetch("/api/resource/status", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          resourceId,
-          status: isNowDone ? "completed" : "not_started",
+        body: JSON.stringify({ 
+          resourceId, 
+          status: isNowDone ? "completed" : "not_started" 
         }),
-      })
+      });
 
-      if (!res.ok) throw new Error()
+      if (!res.ok) throw new Error();
+      const updated = await res.json();
 
-      const updated = await res.json()
-
+      // Update local state
       setProgress((prev) => [
         ...prev.filter((p: any) => p.resourceId !== resourceId),
         updated,
-      ])
+      ]);
 
+      // 2. Logic to run ONLY if the resource was marked as completed
       if (isNowDone) {
-        notify("Resource bookmarked. Complete all to unlock exam.")
+        // Since the backend now handles the streak logic, we show a themed notification
+        notify("Activity logged! Keeping the fire alive 🔥");
 
+        // Auto-stash the path if this is the user's first interaction
         if (!isStashed) {
           const stashRes = await fetch("/api/collections/save", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              collectionId: collection._id,
-            }),
-          })
-
-          if (stashRes.ok) setIsStashed(true)
+            body: JSON.stringify({ collectionId: collection._id }),
+          });
+          if (stashRes.ok) setIsStashed(true);
         }
       }
     } catch {
-      notify("Connection error.", "error")
+      notify("Connection error. Progress not synced.", "error");
     } finally {
-      setUpdatingId(null)
+      setUpdatingId(null);
     }
-  }
+  };
 
   // ================= EXAM SUBMIT =================
   const handleExamSubmit = async () => {
