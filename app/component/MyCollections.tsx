@@ -130,9 +130,13 @@ export default function MyCollections({ userCollections, setUserCollections, not
 
                 <button 
                   onClick={() => router.push(collectionUrl)}
-                  className="flex-[2] py-3.5 rounded-xl bg-purple-600 text-white text-[11px] font-black uppercase tracking-widest shadow-lg shadow-purple-500/25 hover:bg-purple-500 hover:-translate-y-0.5 transition-all active:scale-95"
+                  className={`flex-[2] py-3.5 rounded-xl text-[11px] font-black uppercase tracking-widest shadow-lg transition-all active:scale-95 ${
+                    item.progress === 100 
+                    ? "bg-[#0066FF] text-white shadow-[0_0_12px_rgba(0,102,255,0.3),0_0_28px_rgba(0,153,255,0.18)] hover:bg-[#0A7CFF] hover:shadow-[0_0_18px_rgba(0,102,255,0.45),0_0_40px_rgba(0,153,255,0.28)] hover:-translate-y-0.5"
+                      : "bg-purple-600 text-white shadow-purple-500/25 hover:bg-purple-500 hover:-translate-y-0.5"
+                  }`}
                 >
-                  Resume Journey
+                  {item.progress === 100 ? "Review Mastery" : "Resume Journey"}
                 </button>
               </div>
 

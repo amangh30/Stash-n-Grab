@@ -2,6 +2,8 @@
 
 import { useState, useMemo, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
+import CollectionEditor from "./CollectionEditor"
+import { useRouter } from "next/navigation";
 
 // ================= TOAST =================
 const Toast = ({
@@ -43,15 +45,18 @@ const Toast = ({
 
 // ================= MAIN =================
 export default function CurriculumViewer({
-  collection = {},
+  collection: initialCollection,
   initialProgress = [],
   initialHasRated = false,
   passedExams = [],
   user,
   isStashed: initialStashed = false,
 }: any) {
+  const router = useRouter();
   const [isStashed, setIsStashed] = useState(initialStashed)
   const [progress, setProgress] = useState<any[]>(initialProgress)
+  const [collection, setCollection] = useState(initialCollection)
+  const [isEditing, setIsEditing] = useState(false)
 
   const [clearedExams, setClearedExams] = useState<string[]>(
     () =>
@@ -264,6 +269,28 @@ export default function CurriculumViewer({
     }
   }, [collection, clearedExams])
 
+    const isOwner = user?.id === collection.createdBy?._id || user?.id === collection.createdBy
+
+  const handleEditorSave = (updatedCollection: any) => {
+    setCollection(updatedCollection)
+    setIsEditing(false)
+    notify("Path Architecture Updated Successfully!")
+    router.refresh();
+  }
+
+  // --- RENDER LOGIC ---
+  if (isEditing) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-12">
+        <CollectionEditor 
+          collection={collection} 
+          onCancel={() => setIsEditing(false)} 
+          onSave={handleEditorSave}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="relative space-y-12 max-w-4xl mx-auto px-4 py-12">
       <AnimatePresence>
@@ -275,6 +302,18 @@ export default function CurriculumViewer({
           />
         )}
       </AnimatePresence>
+
+      {/* ARCHITECT TOGGLE */}
+      {isOwner && (
+        <div className="flex justify-end">
+          <button 
+            onClick={() => setIsEditing(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-600/10 border border-purple-500/20 text-purple-400 text-[10px] font-black uppercase tracking-widest hover:bg-purple-600 hover:text-white transition-all"
+          >
+            🛠️ Enter Architect Mode
+          </button>
+        </div>
+      )}
 
       {/* STICKY PROGRESS BAR */}
       <div className="sticky top-6 z-40 bg-white/90 dark:bg-[#0b0b0f]/80 backdrop-blur-xl p-6 rounded-3xl border border-zinc-200 dark:border-white/10 shadow-lg dark:shadow-2xl">
@@ -301,6 +340,7 @@ export default function CurriculumViewer({
           />
         </div>
       </div>
+      
 
       {/* RATING WALL */}
       <AnimatePresence>
@@ -332,6 +372,7 @@ export default function CurriculumViewer({
           </motion.div>
         )}
       </AnimatePresence>
+
 
       <motion.div layout className="space-y-10">
         {collection.sections?.map(

@@ -44,12 +44,15 @@ export const authOptions = {
         email: session.user.email
       })
 
-      // attach DB user info to session
+      if (!dbUser) return session; // Safety check
+
+      // 🔥 THE FIX: Ensure this is a string and remove the redundant second line
       session.user.id = dbUser._id.toString()
-      session.user.id = dbUser._id
-      session.user.xp = dbUser.xp
-      session.user.level = dbUser.level
-      session.user.streak = dbUser.streak
+      
+      // Attach other stats
+      session.user.xp = dbUser.xp || 0
+      session.user.level = dbUser.level || 1
+      session.user.streak = dbUser.streak || 0
 
       return session
     }
