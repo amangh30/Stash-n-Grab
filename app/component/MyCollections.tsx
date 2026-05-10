@@ -2,10 +2,21 @@
 
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
+import type { Transition } from "framer-motion"
 import { useRouter } from "next/navigation"
 
-const SOFT_SPRING = { type: "spring", stiffness: 300, damping: 30, mass: 0.8 }
-const ENTRANCE_SPRING = { type: "spring", stiffness: 100, damping: 20, mass: 0.5 }
+const SOFT_SPRING: Transition = {
+  type: "spring",
+  stiffness: 300,
+  damping: 30,
+  mass: 0.8,
+}
+const ENTRANCE_SPRING: Transition = {
+  type: "spring",
+  stiffness: 100,
+  damping: 20,
+  mass: 0.5,
+}
 
 export default function MyCollections({ userCollections, setUserCollections, notify }: any) {
   const router = useRouter()
@@ -132,7 +143,7 @@ export default function MyCollections({ userCollections, setUserCollections, not
                   onClick={() => router.push(collectionUrl)}
                   className={`flex-[2] py-3.5 rounded-xl text-[11px] font-black uppercase tracking-widest shadow-lg transition-all active:scale-95 ${
                     item.progress === 100 
-                    ? "bg-[#0066FF] text-white shadow-[0_0_12px_rgba(0,102,255,0.3),0_0_28px_rgba(0,153,255,0.18)] hover:bg-[#0A7CFF] hover:shadow-[0_0_18px_rgba(0,102,255,0.45),0_0_40px_rgba(0,153,255,0.28)] hover:-translate-y-0.5"
+                      ? "bg-[#0066FF] text-white shadow-[0_0_18px_rgba(0,102,255,0.45),0_0_42px_rgba(0,153,255,0.28)] hover:bg-[#0A7CFF] hover:shadow-[0_0_24px_rgba(0,102,255,0.65),0_0_60px_rgba(0,153,255,0.4)] hover:-translate-y-0.5"
                       : "bg-purple-600 text-white shadow-purple-500/25 hover:bg-purple-500 hover:-translate-y-0.5"
                   }`}
                 >

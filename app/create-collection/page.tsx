@@ -19,13 +19,13 @@ interface QuestionDraft {
 interface SectionDraft {
   title: string;
   resources: ResourceDraft[];
-  questions: QuestionDraft[]; // 🔥 Fixed type from [] to QuestionDraft[]
+  questions: QuestionDraft[]; 
 }
 
 export default function CreateCollectionPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
-  // Update Initial State
+  
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -33,12 +33,11 @@ export default function CreateCollectionPage() {
       { 
         title: "Introduction", 
         resources: [{ title: "", link: "" }], 
-        questions: [{ questionText: "", options: ["", "", "", ""], correctOptionIndex: 0 }] // 🔥 Added initial question
+        questions: [{ questionText: "", options: ["", "", "", ""], correctOptionIndex: 0 }] 
       }
     ] as SectionDraft[]
   })
 
-  // Update addSection function
   const addSection = () => {
     setForm({
       ...form,
@@ -47,7 +46,7 @@ export default function CreateCollectionPage() {
         { 
           title: "", 
           resources: [{ title: "", link: "" }], 
-          questions: [{ questionText: "", options: ["", "", "", ""], correctOptionIndex: 0 }] // 🔥 Added initial question
+          questions: [{ questionText: "", options: ["", "", "", ""], correctOptionIndex: 0 }] 
         }
       ]
     })
@@ -63,7 +62,6 @@ export default function CreateCollectionPage() {
     setForm({ ...form, sections: next })
   }
 
-  // --- LOGIC: Resources ---
   const addResource = (sIdx: number) => {
     const next = [...form.sections]
     next[sIdx].resources.push({ title: "", link: "" })
@@ -82,7 +80,6 @@ export default function CreateCollectionPage() {
     setForm({ ...form, sections: next })
   }
 
-  // --- 🔥 LOGIC: MCQ Questions ---
   const addQuestion = (sIdx: number) => {
     const next = [...form.sections]
     next[sIdx].questions.push({
@@ -120,35 +117,22 @@ export default function CreateCollectionPage() {
       setForm({ ...form, sections: next });
     };
 
-  // --- SUBMIT ---
   const handlePublish = async () => {
-    // 1. Root Validation
     if (!form.title.trim()) return alert("Your collection needs a title!");
     if (!form.description.trim()) return alert("Please add a description!");
     if (form.sections.length === 0) return alert("Add at least one section!");
 
-    // 2. Deep Validation
     for (let i = 0; i < form.sections.length; i++) {
       const section = form.sections[i];
       const sName = `Section ${i + 1} ("${section.title || 'Untitled'}")`;
-
       if (!section.title.trim()) return alert(`${sName} is missing a title!`);
-      
-      // Resources Check
       if (!section.resources?.length) return alert(`${sName} needs at least one resource.`);
       const invalidRes = section.resources.some(r => !r.title.trim() || !r.link.trim());
       if (invalidRes) return alert(`All resources in ${sName} must have a title and a URL.`);
-
-      // 🔥 Mandatory Exam Check
-      if (!section.questions?.length) {
-        return alert(`${sName} requires a Gatekeeper Exam. Add at least one question!`);
-      }
-
-      // Questions Content Check
+      if (!section.questions?.length) return alert(`${sName} requires a Gatekeeper Exam.`);
       for (let j = 0; j < section.questions.length; j++) {
         const q = section.questions[j];
         const qName = `Question ${j + 1} in ${sName}`;
-
         if (!q.questionText.trim()) return alert(`${qName} text is empty!`);
         if (q.options.some(opt => !opt.trim())) return alert(`${qName} has empty options!`);
       }
@@ -161,7 +145,6 @@ export default function CreateCollectionPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form)
       });
-
       if (res.ok) {
         router.push("/");
         router.refresh();
@@ -185,7 +168,6 @@ export default function CreateCollectionPage() {
       s.title.trim() !== "" && 
       s.resources.length > 0 &&
       s.resources.every(r => r.title.trim() !== "" && r.link.trim() !== "") &&
-      // 🔥 Mandatory Exam Check: Must have at least 1 question, and all questions must be filled
       s.questions.length > 0 && 
       s.questions.every(q => 
         q.questionText.trim() !== "" && 
@@ -194,26 +176,26 @@ export default function CreateCollectionPage() {
     );
 
   return (
-    <div className="min-h-screen bg-[#0b0b0f] text-white">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#0b0b0f] text-slate-900 dark:text-white transition-colors duration-300">
       {/* 🚀 STICKY HEADER */}
-      <header className="sticky top-0 z-50 bg-[#0b0b0f]/80 backdrop-blur-xl border-b border-white/5 px-6 py-4">
+      <header className="sticky top-0 z-50 bg-white/80 dark:bg-[#0b0b0f]/80 backdrop-blur-xl border-b border-slate-200 dark:border-white/5 px-6 py-4">
         <div className="max-w-5xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <Link href="/" className="text-gray-500 hover:text-white transition text-sm font-bold">
+            <Link href="/" className="text-slate-400 dark:text-gray-500 hover:text-slate-900 dark:hover:text-white transition text-sm font-bold">
               ← Back
             </Link>
-            <div className="h-4 w-px bg-white/10" />
-            <h1 className="text-lg font-black tracking-tight">Collection <span className="text-purple-500">Studio</span></h1>
+            <div className="h-4 w-px bg-slate-200 dark:bg-white/10" />
+            <h1 className="text-lg font-black tracking-tight">Collection <span className="text-purple-600 dark:text-purple-500">Studio</span></h1>
           </div>
 
           <div className="flex items-center gap-4">
             <button 
               onClick={handlePublish}
               disabled={loading || !isFormValid}
-              className={`px-6 py-2 rounded-xl font-black text-sm transition transition-all duration-300
+              className={`px-6 py-2 rounded-xl font-black text-sm transition-all duration-300
                 ${isFormValid 
-                  ? "bg-gradient-to-r from-purple-600 to-blue-500 text-white shadow-lg shadow-purple-500/20 hover:scale-105 active:scale-95" 
-                  : "bg-white/5 text-gray-500 cursor-not-allowed border border-white/10"}
+                  ? "bg-purple-600 dark:bg-gradient-to-r dark:from-purple-600 dark:to-blue-500 text-white shadow-lg shadow-purple-500/20 hover:scale-105 active:scale-95" 
+                  : "bg-slate-100 dark:bg-white/5 text-slate-400 dark:text-gray-500 cursor-not-allowed border border-slate-200 dark:border-white/10"}
                 ${loading ? "opacity-50" : "opacity-100"}`}
             >
               {loading ? "Stashing..." : isFormValid ? "Publish Collection" : "Complete All Fields"}
@@ -233,27 +215,27 @@ export default function CreateCollectionPage() {
           <section className="space-y-6">
             <input 
               autoFocus
-              placeholder="Collection Title (e.g. Linux System Programming)"
-              className="w-full bg-transparent text-5xl font-black placeholder:text-white/10 outline-none border-none focus:ring-0"
+              placeholder="Collection Title..."
+              className="w-full bg-transparent text-5xl font-black placeholder:text-slate-200 dark:placeholder:text-white/10 outline-none border-none focus:ring-0"
               onChange={(e) => setForm({ ...form, title: e.target.value })}
             />
             <textarea 
-              placeholder="Give your collection a description. What will people learn?"
+              placeholder="Give your collection a description..."
               rows={2}
-              className="w-full bg-transparent text-xl text-gray-500 placeholder:text-white/10 outline-none border-none focus:ring-0 resize-none"
+              className="w-full bg-transparent text-xl text-slate-500 dark:text-gray-500 placeholder:text-slate-200 dark:placeholder:text-white/10 outline-none border-none focus:ring-0 resize-none"
               onChange={(e) => setForm({ ...form, description: e.target.value })}
             />
           </section>
 
-          <div className="h-px bg-white/5" />
+          <div className="h-px bg-slate-200 dark:bg-white/5" />
 
           {/* SECTIONS LIST */}
           <section className="space-y-8 pb-32">
             <div className="flex justify-between items-center">
-              <h2 className="text-xs font-black uppercase tracking-[0.3em] text-purple-500">Curriculum Structure</h2>
+              <h2 className="text-xs font-black uppercase tracking-[0.3em] text-purple-600 dark:text-purple-500">Curriculum Structure</h2>
               <button 
                 onClick={addSection}
-                className="text-xs font-bold px-4 py-2 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition"
+                className="text-xs font-bold px-4 py-2 bg-white dark:bg-white/5 rounded-lg border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/10 transition shadow-sm dark:shadow-none"
               >
                 + New Section
               </button>
@@ -268,46 +250,46 @@ export default function CreateCollectionPage() {
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, scale: 0.9 }}
-                    className="relative group p-8 rounded-[2rem] bg-white/5 border border-white/5 hover:border-white/10 transition-all"
+                    className="relative group p-8 rounded-[2rem] bg-white dark:bg-white/5 border border-slate-200 dark:border-white/5 hover:border-purple-300 dark:hover:border-white/10 transition-all shadow-sm dark:shadow-none"
                   >
                     {/* Section Header */}
                     <div className="flex gap-4 items-center mb-6">
-                      <div className="w-8 h-8 rounded-lg bg-purple-500/20 text-purple-500 flex items-center justify-center font-black text-xs">
+                      <div className="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-500/20 text-purple-600 dark:text-purple-500 flex items-center justify-center font-black text-xs">
                         {sIdx + 1}
                       </div>
                       <input 
                         placeholder="Section Title..."
                         value={section.title}
-                        className="flex-1 bg-transparent text-xl font-bold text-white outline-none border-b border-transparent focus:border-purple-500 transition"
+                        className="flex-1 bg-transparent text-xl font-bold outline-none border-b border-transparent focus:border-purple-600 dark:focus:border-purple-500 transition"
                         onChange={(e) => updateSectionTitle(sIdx, e.target.value)}
                       />
                       <button 
                         onClick={() => removeSection(sIdx)}
-                        className="opacity-0 group-hover:opacity-100 text-gray-600 hover:text-red-500 transition text-xs font-bold"
+                        className="opacity-0 group-hover:opacity-100 text-slate-400 dark:text-gray-600 hover:text-red-500 transition text-xs font-bold"
                       >
                         Remove
                       </button>
                     </div>
 
                     {/* Resources List */}
-                    <div className="space-y-4 pl-12 border-l-2 border-white/5 mb-8">
+                    <div className="space-y-4 pl-12 border-l-2 border-slate-100 dark:border-white/5 mb-8">
                       {section.resources.map((res, rIdx) => (
                         <motion.div key={rIdx} layout className="flex gap-4 items-center">
                           <input 
                             placeholder="Resource Name"
                             value={res.title}
-                            className="flex-1 bg-white/5 border border-white/5 p-3 rounded-xl text-sm text-white focus:border-purple-500/50 outline-none"
+                            className="flex-1 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 p-3 rounded-xl text-sm focus:border-purple-400 dark:focus:border-purple-500/50 outline-none transition"
                             onChange={(e) => updateResource(sIdx, rIdx, 'title', e.target.value)}
                           />
                           <input 
                             placeholder="URL"
                             value={res.link}
-                            className="flex-[2] bg-white/5 border border-white/5 p-3 rounded-xl text-sm text-gray-400 focus:border-purple-500/50 outline-none"
+                            className="flex-[2] bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 p-3 rounded-xl text-sm text-slate-500 dark:text-gray-400 focus:border-purple-400 dark:focus:border-purple-500/50 outline-none transition"
                             onChange={(e) => updateResource(sIdx, rIdx, 'link', e.target.value)}
                           />
                           <button 
                             onClick={() => removeResource(sIdx, rIdx)}
-                            className="text-gray-700 hover:text-red-400 transition"
+                            className="text-slate-300 dark:text-gray-700 hover:text-red-500 dark:hover:text-red-400 transition"
                           >
                             ✕
                           </button>
@@ -316,22 +298,22 @@ export default function CreateCollectionPage() {
                       
                       <button 
                         onClick={() => addResource(sIdx)}
-                        className="mt-2 text-xs font-black uppercase text-purple-500/60 hover:text-purple-400 transition tracking-widest"
+                        className="mt-2 text-xs font-black uppercase text-purple-600/60 dark:text-purple-500/60 hover:text-purple-600 dark:hover:text-purple-400 transition tracking-widest"
                       >
                         + Add Link to {section.title || "Section"}
                       </button>
                     </div>
 
                     {/* 🔥 SECTION MCQ EXAM BUILDER */}
-                    <div className="mt-8 pt-6 border-t border-white/5 space-y-4 pl-12">
+                    <div className="mt-8 pt-6 border-t border-slate-100 dark:border-white/5 space-y-4 pl-12">
                       <div className="flex justify-between items-center">
-                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-500">
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-600 dark:text-orange-500">
                           Section Gatekeeper Exam
                         </h4>
                         <button
                           type="button"
                           onClick={() => addQuestion(sIdx)}
-                          className="text-[10px] font-black uppercase bg-orange-500/10 text-orange-400 border border-orange-500/20 px-3 py-1.5 rounded-lg hover:bg-orange-500 hover:text-white transition"
+                          className="text-[10px] font-black uppercase bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-100 dark:border-orange-500/20 px-3 py-1.5 rounded-lg hover:bg-orange-600 dark:hover:bg-orange-500 hover:text-white transition"
                         >
                           + Add MCQ Question
                         </button>
@@ -339,19 +321,18 @@ export default function CreateCollectionPage() {
 
                       <div className="space-y-4">
                         {section.questions?.map((q, qIdx) => (
-                          <div key={qIdx} className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl space-y-3 relative group/question">
+                          <div key={qIdx} className="p-4 bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 rounded-2xl space-y-3 relative">
                             <div className="flex justify-between items-center gap-4">
                               <input
-                                placeholder={`Question ${qIdx + 1}: e.g. What is the execution time?`}
+                                placeholder={`Question ${qIdx + 1}...`}
                                 value={q.questionText}
-                                className="w-full bg-white/5 border border-white/5 p-3 rounded-xl text-sm text-white outline-none focus:border-orange-500/40"
+                                className="w-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/5 p-3 rounded-xl text-sm outline-none focus:border-orange-400 dark:focus:border-orange-500/40 transition"
                                 onChange={(e) => updateQuestionText(sIdx, qIdx, e.target.value)}
                               />
                               <button
                                 type="button"
                                 onClick={() => removeQuestion(sIdx, qIdx)}
-                                // 🔥 Hide remove button if it's the only question left
-                                className={`${section.questions.length <= 1 ? 'hidden' : 'flex'} text-gray-500 hover:text-red-400 text-xs font-bold`}
+                                className={`${section.questions.length <= 1 ? 'hidden' : 'flex'} text-slate-300 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 text-xs font-bold`}
                               >
                                 ✕
                               </button>
@@ -359,18 +340,18 @@ export default function CreateCollectionPage() {
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                               {q.options.map((opt, oIdx) => (
-                                <div key={oIdx} className="flex items-center gap-3 bg-black/20 px-3 py-2 rounded-xl border border-white/5 focus-within:border-orange-500/20">
+                                <div key={oIdx} className="flex items-center gap-3 bg-white dark:bg-black/20 px-3 py-2 rounded-xl border border-slate-200 dark:border-white/5 focus-within:border-orange-300 dark:focus-within:border-orange-500/20 transition">
                                   <input
                                     type="radio"
                                     name={`correct-${sIdx}-${qIdx}`}
                                     checked={q.correctOptionIndex === oIdx}
                                     onChange={() => updateCorrectOption(sIdx, qIdx, oIdx)}
-                                    className="accent-orange-500 cursor-pointer w-4 h-4"
+                                    className="accent-orange-600 dark:accent-orange-500 cursor-pointer w-4 h-4"
                                   />
                                   <input
                                     placeholder={`Option ${oIdx + 1}`}
                                     value={opt}
-                                    className="bg-transparent text-xs text-white outline-none flex-1 placeholder:text-gray-600"
+                                    className="bg-transparent text-xs outline-none flex-1 placeholder:text-slate-300 dark:placeholder:text-gray-600"
                                     onChange={(e) => updateQuestionOption(sIdx, qIdx, oIdx, e.target.value)}
                                   />
                                 </div>
@@ -391,8 +372,8 @@ export default function CreateCollectionPage() {
 
       {/* SUBTLE BACKGROUND DECORATION */}
       <div className="fixed top-0 left-0 w-full h-full pointer-events-none -z-10 overflow-hidden">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-600/10 rounded-full blur-[120px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-600/10 rounded-full blur-[120px]" />
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-100 dark:bg-purple-600/10 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-50 dark:bg-blue-600/10 rounded-full blur-[120px]" />
       </div>
     </div>
   )
