@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
+import Link from "next/link" // 🔥 Import Link
 
 export default function Leaderboard({ onClose }: { onClose: () => void }) {
   const [data, setData] = useState<{ top10: any[], currentUser: any } | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Close on Escape key press
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose()
     }
@@ -32,12 +32,10 @@ export default function Leaderboard({ onClose }: { onClose: () => void }) {
 
   return (
     <div 
-      // 🔥 CLICK BACKDROP TO CLOSE
       onClick={onClose}
       className="fixed inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-md flex items-center justify-center z-[110] p-4 transition-colors duration-500"
     >
       <motion.div
-        // 🔥 STOP PROPAGATION SO CLICKS INSIDE DON'T CLOSE
         onClick={(e) => e.stopPropagation()}
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -66,35 +64,46 @@ export default function Leaderboard({ onClose }: { onClose: () => void }) {
             </div>
           ) : (
             data?.top10.map((u, index) => (
-              <motion.div 
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.05 }}
+              <Link 
                 key={u._id} 
-                className={`flex items-center gap-4 p-4 rounded-2xl border transition-all ${
-                  index === 0 
-                    ? "bg-yellow-500/5 dark:bg-yellow-500/10 border-yellow-500/20 shadow-sm" 
-                    : "bg-slate-50 dark:bg-white/5 border-slate-100 dark:border-white/5"
-                }`}
+                href={`/profile/${u._id}`} 
+                onClick={onClose} // 🔥 Close modal when navigating
+                className="group/user"
               >
-                <span className={`text-lg font-black w-6 ${index === 0 ? "text-yellow-500 dark:text-yellow-400" : "text-slate-400 dark:text-gray-500"}`}>
-                  #{index + 1}
-                </span>
-                
-                <img src={u.image} className="w-10 h-10 rounded-full border border-slate-200 dark:border-white/10 shadow-sm" alt="" />
-                
-                <div className="flex-1">
-                  <p className="font-bold text-slate-900 dark:text-white text-sm">{u.name}</p>
-                  <p className="text-[10px] text-slate-500 dark:text-gray-400 font-bold uppercase tracking-tight">
-                    Level {u.level} • <span className="text-orange-500">🔥 {u.streak}</span>
-                  </p>
-                </div>
-                
-                <div className="text-right">
-                  <p className="text-lg font-black text-slate-900 dark:text-white leading-none">{u.xp}</p>
-                  <p className="text-[10px] text-slate-400 dark:text-gray-500 uppercase font-bold tracking-tighter">XP</p>
-                </div>
-              </motion.div>
+                <motion.div 
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  className={`flex items-center gap-4 p-4 rounded-2xl border transition-all ${
+                    index === 0 
+                      ? "bg-yellow-500/5 dark:bg-yellow-500/10 border-yellow-500/20 shadow-sm" 
+                      : "bg-slate-50 dark:bg-white/5 border-slate-100 dark:border-white/5 group-hover/user:border-purple-500/30 group-hover/user:bg-purple-50/50 dark:group-hover/user:bg-purple-500/5"
+                  }`}
+                >
+                  <span className={`text-lg font-black w-6 ${index === 0 ? "text-yellow-500 dark:text-yellow-400" : "text-slate-400 dark:text-gray-500"}`}>
+                    #{index + 1}
+                  </span>
+                  
+                  <img src={u.image} className="w-10 h-10 rounded-full border border-slate-200 dark:border-white/10 shadow-sm" alt="" />
+                  
+                  <div className="flex-1">
+                    <div className="flex items-center gap-1">
+                      <p className="font-bold text-slate-900 dark:text-white text-sm group-hover/user:text-purple-600 dark:group-hover/user:text-purple-400 transition-colors">
+                        {u.name}
+                      </p>
+                      <span className="opacity-0 -translate-x-1 group-hover/user:opacity-100 group-hover/user:translate-x-0 transition-all text-purple-500 text-xs">→</span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 dark:text-gray-400 font-bold uppercase tracking-tight">
+                      Level {u.level} • <span className="text-orange-500">🔥 {u.streak}</span>
+                    </p>
+                  </div>
+                  
+                  <div className="text-right">
+                    <p className="text-lg font-black text-slate-900 dark:text-white leading-none">{u.xp}</p>
+                    <p className="text-[10px] text-slate-400 dark:text-gray-500 uppercase font-bold tracking-tighter">XP</p>
+                  </div>
+                </motion.div>
+              </Link>
             ))
           )}
         </div>
@@ -102,27 +111,33 @@ export default function Leaderboard({ onClose }: { onClose: () => void }) {
         {/* 🔥 PERSONAL RANK SECTION */}
         <AnimatePresence>
           {!loading && data?.currentUser && (
-            <motion.div 
-              initial={{ y: 50 }} 
-              animate={{ y: 0 }} 
-              className="p-6 bg-purple-50 dark:bg-purple-600/20 border-t border-purple-100 dark:border-purple-500/30"
+            <Link 
+              href={`/profile/${data.currentUser.id || data.currentUser._id}`} 
+              onClick={onClose}
+              className="group/me"
             >
-              <p className="text-[10px] font-black text-purple-600 dark:text-purple-400 uppercase tracking-[0.2em] mb-3 px-1">Your Position</p>
-              <div className="flex items-center gap-4 p-4 rounded-2xl bg-white dark:bg-purple-500/20 border border-purple-200 dark:border-purple-500/40 shadow-xl shadow-purple-500/5">
-                <span className="text-lg font-black w-8 text-purple-600 dark:text-purple-300">#{data.currentUser.rank}</span>
-                <img src={data.currentUser.image} className="w-10 h-10 rounded-full border-2 border-purple-400/50 shadow-sm" alt="" />
-                <div className="flex-1">
-                  <p className="font-bold text-slate-900 dark:text-white text-sm">{data.currentUser.name} (You)</p>
-                  <p className="text-[10px] text-purple-600 dark:text-purple-300 font-bold uppercase tracking-tight">
-                    Level {data.currentUser.level} • 🔥 {data.currentUser.streak}
-                  </p>
+              <motion.div 
+                initial={{ y: 50 }} 
+                animate={{ y: 0 }} 
+                className="p-6 bg-purple-50 dark:bg-purple-600/20 border-t border-purple-100 dark:border-purple-500/30"
+              >
+                <p className="text-[10px] font-black text-purple-600 dark:text-purple-400 uppercase tracking-[0.2em] mb-3 px-1">Your Position</p>
+                <div className="flex items-center gap-4 p-4 rounded-2xl bg-white dark:bg-purple-500/20 border border-purple-200 dark:border-purple-500/40 shadow-xl shadow-purple-500/5 transition-all group-hover/me:shadow-purple-500/20 group-hover/me:scale-[1.01]">
+                  <span className="text-lg font-black w-8 text-purple-600 dark:text-purple-300">#{data.currentUser.rank}</span>
+                  <img src={data.currentUser.image} className="w-10 h-10 rounded-full border-2 border-purple-400/50 shadow-sm" alt="" />
+                  <div className="flex-1">
+                    <p className="font-bold text-slate-900 dark:text-white text-sm">{data.currentUser.name} (You) <span className="text-xs opacity-0 group-hover/me:opacity-100 transition-opacity">→</span></p>
+                    <p className="text-[10px] text-purple-600 dark:text-purple-300 font-bold uppercase tracking-tight">
+                      Level {data.currentUser.level} • 🔥 {data.currentUser.streak}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-black text-slate-900 dark:text-white leading-none">{data.currentUser.xp}</p>
+                    <p className="text-[10px] text-purple-600 dark:text-purple-300 uppercase font-bold tracking-tighter">XP</p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-lg font-black text-slate-900 dark:text-white leading-none">{data.currentUser.xp}</p>
-                  <p className="text-[10px] text-purple-600 dark:text-purple-300 uppercase font-bold tracking-tighter">XP</p>
-                </div>
-              </div>
-            </motion.div>
+              </motion.div>
+            </Link>
           )}
         </AnimatePresence>
 
