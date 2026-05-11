@@ -38,7 +38,7 @@ export default async function HomePage() {
     .lean()
 
   // 2. Fetch User's Stashed Collections (The folders they "Grabbed")
-  let userCollectionsDocs = []
+  let userCollectionsDocs: any[] = []
   if (session) {
     userCollectionsDocs = await UserCollection.find({ userId: session.user.id })
       .populate({
