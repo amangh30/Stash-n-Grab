@@ -1,9 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { useSession } from "next-auth/react" // 🔥 Import useSession
 
 interface ResourceDraft {
   title: string;
@@ -23,6 +24,7 @@ interface SectionDraft {
 }
 
 export default function CreateCollectionPage() {
+  const { data: session, status } = useSession() // 🔥 Get session status
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   
@@ -38,17 +40,22 @@ export default function CreateCollectionPage() {
     ] as SectionDraft[]
   })
 
+  // 🔥 Redirect if not authenticated
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/") // Or "/api/auth/signin"
+    }
+  }, [status, router])
+
+  // --- LOGIC FUNCTIONS (Stay the same) ---
   const addSection = () => {
     setForm({
       ...form,
-      sections: [
-        ...form.sections, 
-        { 
-          title: "", 
-          resources: [{ title: "", link: "" }], 
-          questions: [{ questionText: "", options: ["", "", "", ""], correctOptionIndex: 0 }] 
-        }
-      ]
+      sections: [...form.sections, { 
+        title: "", 
+        resources: [{ title: "", link: "" }], 
+        questions: [{ questionText: "", options: ["", "", "", ""], correctOptionIndex: 0 }] 
+      }]
     })
   }
 
@@ -57,87 +64,55 @@ export default function CreateCollectionPage() {
   }
 
   const updateSectionTitle = (index: number, title: string) => {
-    const next = [...form.sections]
-    next[index].title = title
+    const next = [...form.sections]; next[index].title = title;
     setForm({ ...form, sections: next })
   }
 
   const addResource = (sIdx: number) => {
-    const next = [...form.sections]
-    next[sIdx].resources.push({ title: "", link: "" })
+    const next = [...form.sections]; next[sIdx].resources.push({ title: "", link: "" });
     setForm({ ...form, sections: next })
   }
 
   const updateResource = (sIdx: number, rIdx: number, field: keyof ResourceDraft, val: string) => {
-    const next = [...form.sections]
-    next[sIdx].resources[rIdx][field] = val
+    const next = [...form.sections]; next[sIdx].resources[rIdx][field] = val;
     setForm({ ...form, sections: next })
   }
 
   const removeResource = (sIdx: number, rIdx: number) => {
-    const next = [...form.sections]
-    next[sIdx].resources = next[sIdx].resources.filter((_, i) => i !== rIdx)
+    const next = [...form.sections]; next[sIdx].resources = next[sIdx].resources.filter((_, i) => i !== rIdx);
     setForm({ ...form, sections: next })
   }
 
   const addQuestion = (sIdx: number) => {
-    const next = [...form.sections]
-    next[sIdx].questions.push({
-      questionText: "",
-      options: ["", "", "", ""],
-      correctOptionIndex: 0
-    })
+    const next = [...form.sections];
+    next[sIdx].questions.push({ questionText: "", options: ["", "", "", ""], correctOptionIndex: 0 });
     setForm({ ...form, sections: next })
   }
 
   const updateQuestionText = (sIdx: number, qIdx: number, val: string) => {
-    const next = [...form.sections]
-    next[sIdx].questions[qIdx].questionText = val
+    const next = [...form.sections]; next[sIdx].questions[qIdx].questionText = val;
     setForm({ ...form, sections: next })
   }
 
   const updateQuestionOption = (sIdx: number, qIdx: number, oIdx: number, val: string) => {
-    const next = [...form.sections]
-    next[sIdx].questions[qIdx].options[oIdx] = val
+    const next = [...form.sections]; next[sIdx].questions[qIdx].options[oIdx] = val;
     setForm({ ...form, sections: next })
   }
 
   const updateCorrectOption = (sIdx: number, qIdx: number, oIdx: number) => {
-    const next = [...form.sections]
-    next[sIdx].questions[qIdx].correctOptionIndex = oIdx
+    const next = [...form.sections]; next[sIdx].questions[qIdx].correctOptionIndex = oIdx;
     setForm({ ...form, sections: next })
   }
 
   const removeQuestion = (sIdx: number, qIdx: number) => {
-      const next = [...form.sections];
-      if (next[sIdx].questions.length <= 1) {
-        return alert("Every section must have at least one gatekeeper question.");
-      }
-      next[sIdx].questions = next[sIdx].questions.filter((_, i) => i !== qIdx);
-      setForm({ ...form, sections: next });
-    };
+    const next = [...form.sections];
+    if (next[sIdx].questions.length <= 1) return alert("Every section needs a question.");
+    next[sIdx].questions = next[sIdx].questions.filter((_, i) => i !== qIdx);
+    setForm({ ...form, sections: next });
+  };
 
   const handlePublish = async () => {
-    if (!form.title.trim()) return alert("Your collection needs a title!");
-    if (!form.description.trim()) return alert("Please add a description!");
-    if (form.sections.length === 0) return alert("Add at least one section!");
-
-    for (let i = 0; i < form.sections.length; i++) {
-      const section = form.sections[i];
-      const sName = `Section ${i + 1} ("${section.title || 'Untitled'}")`;
-      if (!section.title.trim()) return alert(`${sName} is missing a title!`);
-      if (!section.resources?.length) return alert(`${sName} needs at least one resource.`);
-      const invalidRes = section.resources.some(r => !r.title.trim() || !r.link.trim());
-      if (invalidRes) return alert(`All resources in ${sName} must have a title and a URL.`);
-      if (!section.questions?.length) return alert(`${sName} requires a Gatekeeper Exam.`);
-      for (let j = 0; j < section.questions.length; j++) {
-        const q = section.questions[j];
-        const qName = `Question ${j + 1} in ${sName}`;
-        if (!q.questionText.trim()) return alert(`${qName} text is empty!`);
-        if (q.options.some(opt => !opt.trim())) return alert(`${qName} has empty options!`);
-      }
-    }
-
+    if (!isFormValid) return alert("Please fill all required fields.");
     setLoading(true);
     try {
       const res = await fetch("/api/collections", {
@@ -153,8 +128,7 @@ export default function CreateCollectionPage() {
         alert(errorData.message || "Failed to publish.");
       }
     } catch (err) {
-      console.error(err);
-      alert("Network error. Please try again.");
+      alert("Network error.");
     } finally {
       setLoading(false);
     }
@@ -175,6 +149,18 @@ export default function CreateCollectionPage() {
       )
     );
 
+  // 🔥 Show loading skeleton or spinner while checking session
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-[#0b0b0f] flex items-center justify-center">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-purple-500 border-t-transparent" />
+      </div>
+    )
+  }
+
+  // Prevent flicker before redirect
+  if (!session) return null;
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#0b0b0f] text-slate-900 dark:text-white transition-colors duration-300">
       {/* 🚀 STICKY HEADER */}
@@ -185,7 +171,7 @@ export default function CreateCollectionPage() {
               ← Back
             </Link>
             <div className="h-4 w-px bg-slate-200 dark:bg-white/10" />
-            <h1 className="text-lg font-black tracking-tight">Collection <span className="text-purple-600 dark:text-purple-500">Studio</span></h1>
+            <h1 className="text-lg font-black tracking-tight italic">Studio <span className="text-purple-600 dark:text-purple-500">Vault</span></h1>
           </div>
 
           <div className="flex items-center gap-4">
@@ -198,7 +184,7 @@ export default function CreateCollectionPage() {
                   : "bg-slate-100 dark:bg-white/5 text-slate-400 dark:text-gray-500 cursor-not-allowed border border-slate-200 dark:border-white/10"}
                 ${loading ? "opacity-50" : "opacity-100"}`}
             >
-              {loading ? "Stashing..." : isFormValid ? "Publish Collection" : "Complete All Fields"}
+              {loading ? "Stashing..." : isFormValid ? "Publish Path" : "Complete All Fields"}
             </button>
           </div>
         </div>
@@ -232,12 +218,12 @@ export default function CreateCollectionPage() {
           {/* SECTIONS LIST */}
           <section className="space-y-8 pb-32">
             <div className="flex justify-between items-center">
-              <h2 className="text-xs font-black uppercase tracking-[0.3em] text-purple-600 dark:text-purple-500">Curriculum Structure</h2>
+              <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-purple-600 dark:text-purple-500">Architecture Structure</h2>
               <button 
                 onClick={addSection}
-                className="text-xs font-bold px-4 py-2 bg-white dark:bg-white/5 rounded-lg border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/10 transition shadow-sm dark:shadow-none"
+                className="text-[10px] font-black uppercase px-4 py-2 bg-white dark:bg-white/5 rounded-lg border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/10 transition shadow-sm dark:shadow-none"
               >
-                + New Section
+                + New Node
               </button>
             </div>
 
@@ -255,7 +241,7 @@ export default function CreateCollectionPage() {
                     {/* Section Header */}
                     <div className="flex gap-4 items-center mb-6">
                       <div className="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-500/20 text-purple-600 dark:text-purple-500 flex items-center justify-center font-black text-xs">
-                        {sIdx + 1}
+                        0{sIdx + 1}
                       </div>
                       <input 
                         placeholder="Section Title..."
@@ -284,7 +270,7 @@ export default function CreateCollectionPage() {
                           <input 
                             placeholder="URL"
                             value={res.link}
-                            className="flex-[2] bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 p-3 rounded-xl text-sm text-slate-500 dark:text-gray-400 focus:border-purple-400 dark:focus:border-purple-500/50 outline-none transition"
+                            className="flex-[2] bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 p-3 rounded-xl text-sm text-slate-500 dark:text-gray-400 focus:border-purple-400 dark:focus:border-purple-500/50 outline-none transition font-mono"
                             onChange={(e) => updateResource(sIdx, rIdx, 'link', e.target.value)}
                           />
                           <button 
@@ -298,7 +284,7 @@ export default function CreateCollectionPage() {
                       
                       <button 
                         onClick={() => addResource(sIdx)}
-                        className="mt-2 text-xs font-black uppercase text-purple-600/60 dark:text-purple-500/60 hover:text-purple-600 dark:hover:text-purple-400 transition tracking-widest"
+                        className="mt-2 text-[10px] font-black uppercase text-purple-600/60 dark:text-purple-500/60 hover:text-purple-600 dark:hover:text-purple-400 transition tracking-widest"
                       >
                         + Add Link to {section.title || "Section"}
                       </button>
@@ -370,7 +356,7 @@ export default function CreateCollectionPage() {
         </motion.div>
       </main>
 
-      {/* SUBTLE BACKGROUND DECORATION */}
+      {/* BACKGROUND DECORATION */}
       <div className="fixed top-0 left-0 w-full h-full pointer-events-none -z-10 overflow-hidden">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-100 dark:bg-purple-600/10 rounded-full blur-[120px]" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-50 dark:bg-blue-600/10 rounded-full blur-[120px]" />
