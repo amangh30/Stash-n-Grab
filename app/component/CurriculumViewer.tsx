@@ -316,7 +316,7 @@ export default function CurriculumViewer({
       )}
 
       {/* STICKY PROGRESS BAR */}
-      <div className="sticky top-6 z-40 bg-white/90 dark:bg-[#0b0b0f]/80 backdrop-blur-xl p-6 rounded-3xl border border-zinc-200 dark:border-white/10 shadow-lg dark:shadow-2xl">
+      <div className="sticky top-6 z-[101] bg-white/90 dark:bg-[#0b0b0f]/80 backdrop-blur-xl p-6 rounded-3xl border border-zinc-200 dark:border-white/10 shadow-lg dark:shadow-2xl">
         <div className="flex justify-between items-end mb-4">
           <div>
             <p className="text-[10px] font-black text-purple-600 dark:text-purple-500 uppercase tracking-widest mb-1">

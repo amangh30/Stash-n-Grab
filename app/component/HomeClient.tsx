@@ -106,27 +106,31 @@ export default function HomeClient({
       
       {/* 1. Header Area */}
       <div className="text-center md:text-left mt-8">
-        <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-3">
+        {/* H1 Fixed: Using span to keep the gradient text on the same line */}
+        <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-slate-900 dark:text-white mb-4 leading-tight">
           Welcome to{" "}
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-500">
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-500 inline-block">
             Stash-N-Grab
           </span>
         </h1>
-        <p className="text-lg text-slate-600 dark:text-gray-400">
+
+        <p className="text-lg md:text-xl text-slate-600 dark:text-gray-400 max-w-2xl font-medium leading-relaxed">
           Search, discover, and manage your digital resources in one place.
         </p>
 
-        <div className="flex gap-4 py-6 justify-center md:justify-start">
+        {/* Buttons with refined spacing and consistent rounded corners */}
+        <div className="flex flex-wrap gap-4 py-8 justify-center md:justify-start items-center">
           <button 
             onClick={() => setShowLeaderboard(true)}
-            className="px-6 py-3 rounded-2xl bg-white/50 dark:bg-white/10 backdrop-blur-md border border-slate-200 dark:border-white/10 font-bold hover:bg-slate-100 dark:hover:bg-white/20 transition-all active:scale-95"
+            className="group flex items-center gap-2 px-8 py-3.5 rounded-2xl bg-white/50 dark:bg-white/5 backdrop-blur-xl border border-slate-200 dark:border-white/10 font-bold text-sm uppercase tracking-widest hover:bg-slate-100 dark:hover:bg-white/10 transition-all active:scale-95"
           >
-            🏆 Rankings
+            <span className="group-hover:rotate-12 transition-transform">🏆</span> Rankings
           </button>
+          
           {user && (
             <button 
               onClick={() => router.push('/create-collection')}
-              className="px-6 py-3 rounded-2xl bg-purple-600 text-white font-bold shadow-lg shadow-purple-500/20 hover:bg-purple-700 transition-all active:scale-95"
+              className="px-8 py-3.5 rounded-2xl bg-purple-600 text-white font-black text-sm uppercase tracking-widest shadow-[0_10px_20px_rgba(147,51,234,0.3)] hover:bg-purple-500 hover:-translate-y-0.5 transition-all active:scale-95"
             >
               + Create Path
             </button>
