@@ -39,9 +39,15 @@ export default function ThemeToggle() {
   return (
     <button
       onClick={toggleTheme}
-      className="fixed cursor-pointer top-6 right-6 z-[100] px-4 py-2 rounded-full bg-white/80 dark:bg-white/10 backdrop-blur-md border border-gray-200 dark:border-white/10 text-sm font-medium shadow-md hover:scale-105 transition text-gray-800 dark:text-white"
+      // 🔥 Changed right-6 to left-6
+      className="fixed cursor-pointer top-6 left-6 z-[100] px-4 py-2 rounded-full bg-white/80 dark:bg-white/10 backdrop-blur-md border border-gray-200 dark:border-white/10 text-sm font-medium shadow-md hover:scale-105 active:scale-95 transition-all text-gray-800 dark:text-white"
     >
-      {dark ? "☀️ Light" : "🌙 Dark"}
+      <span className="flex items-center gap-2">
+        {dark ? "☀️" : "🌙"}
+        <span className="hidden md:inline">
+          {dark ? "Light Mode" : "Dark Mode"}
+        </span>
+      </span>
     </button>
   )
 }
