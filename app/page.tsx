@@ -7,7 +7,6 @@ import Collection from "@/models/Collection"
 import Section from "@/models/Section"
 import Resource from "@/models/Resource"
 import UserCollection from "@/models/UserCollection" // 🔥 Make sure this exists!
-import UserResource from "@/models/UserResource"
 
 // Components
 import AnimatedBackground from "./component/AnimatedBackground"
