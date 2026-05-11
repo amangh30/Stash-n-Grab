@@ -508,7 +508,7 @@ export default function CurriculumViewer({
       {/* EXAM MODAL */}
       <AnimatePresence>
         {activeExamSection && (
-          <div className="fixed inset-0 z-[102] bg-black/40 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[102] bg-black/40 backdrop-blur-md flex items-center justify-center p-4">
             <motion.div
               initial={{
                 opacity: 0,
