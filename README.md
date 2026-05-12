@@ -1,36 +1,96 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🚀 Stash-N-Grab
 
-## Getting Started
+**Stash-N-Grab** is a high-performance Curriculum Studio and Mastery Vault. Unlike traditional learning platforms where progress is gained by simple clicks, Stash-N-Grab utilizes a **Gatekeeper System**: progress and XP are only unlocked once a user proves their knowledge through section-specific exams.
 
-First, run the development server:
+## ✨ Key Features
+
+### 🏗️ Architect Mode
+
+* **Path Construction**: Create complex learning paths with nested modules and resources.
+* **Live Editing**: Owners can update titles, descriptions, and resource links in real-time without resetting student XP.
+* **Gatekeeper Builder**: Integrated MCQ exam creator for every module to verify learner mastery.
+
+### 🛡️ Mastery & XP System
+
+* **Proof of Knowledge**: Progress bars and XP are tied strictly to passing exams.
+* **Streak Logic**: Maintain a daily burn 🔥 by interacting with resources.
+* **Immutable XP**: Hard-earned levels stay on the user profile even if the curriculum architecture changes.
+
+### 🌐 Social & Discovery
+
+* **Public Profiles**: Showcase your Level, XP, Trophy Room, and stashed paths to the community.
+* **Weighted Discovery**: A search algorithm that ranks paths based on a Bayesian weighted average of community ratings.
+* **Vault Stashing**: One-click "grabbing" of paths to save them to your active learning dashboard.
+
+### 🎨 Elite UI/UX
+
+* **Mode-Adaptive**: Seamlessly transitions between a professional "Document" Light Mode and a high-tech "Vault" Dark Mode.
+* **Fluid Motion**: Powered by Framer Motion for spring-physics animations and layout transitions.
+* **Sticky Mastery**: Always-visible progress tracking that follows the learner through the path.
+
+---
+
+## 🛠️ Tech Stack
+
+* **Framework**: [Next.js 14 (App Router)](https://nextjs.org/)
+* **Language**: [TypeScript](https://www.typescriptlang.org/)
+* **Database**: [MongoDB](https://www.mongodb.com/) via [Mongoose](https://mongoosejs.com/)
+* **Authentication**: [NextAuth.js](https://next-auth.js.org/) (Google & GitHub Providers)
+* **Styling**: [Tailwind CSS](https://tailwindcss.com/)
+* **Animations**: [Framer Motion](https://www.framer.com/motion/)
+
+---
+
+## 🚀 Getting Started
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/amangh30/stash-n-grab.git
+cd stash-n-grab
+
+```
+
+### 2. Install dependencies
+
+```bash
+npm install
+
+```
+
+### 3. Environment Setup
+
+Create a `.env.local` file in the root directory and add the following:
+
+```env
+MONGODB_URI=your_mongodb_connection_string
+NEXTAUTH_SECRET=your_secret_key
+NEXTAUTH_URL=http://localhost:3000
+
+GOOGLE_CLIENT_ID=your_google_id
+GOOGLE_CLIENT_SECRET=your_google_secret
+
+GITHUB_ID=your_github_id
+GITHUB_SECRET=your_github_secret
+
+```
+
+### 4. Run the development server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 📂 Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+* `/app`: Next.js 14 routes and API endpoints.
+* `/api/collections`: CRUD operations for curriculum paths.
+* `/api/user`: XP, Streaks, and Profile logic.
 
-## Learn More
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+* `/components`: Reusable UI components (Architect Mode, Curriculum Viewer, Collection List).
+* `/models`: Mongoose schemas for Users, Collections, Sections, and Ratings.
+* `/lib`: Core utility functions, MongoDB connection, and Auth configurations.
