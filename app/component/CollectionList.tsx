@@ -53,40 +53,41 @@ export default function CollectionList({
 }: any) {
   const router = useRouter()
   const [loadingId, setLoadingId] = useState<string | null>(null)
+  const [navigatingId, setNavigatingId] = useState<string | null>(null);
 
   const handleGrab = async (collectionId: string) => {
-  if (!user) return alert("Sign in to stash this path!")
-  if (savedCollectionIds.includes(collectionId)) return
+    if (!user) return alert("Sign in to stash this path!")
+    if (savedCollectionIds.includes(collectionId)) return
 
-  setLoadingId(collectionId)
-  try {
-    const res = await fetch("/api/collections/save", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ collectionId }),
-    })
-    
-    if (!res.ok) throw new Error("Failed to stash")
-    const data = await res.json()
+    setLoadingId(collectionId)
+    try {
+      const res = await fetch("/api/collections/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ collectionId }),
+      })
 
-    if (setUserCollections) {
-      // 🔥 THE FIX: Find the full collection object from our current list
-      const fullCollectionData = collections.find((c: any) => c._id.toString() === collectionId);
+      if (!res.ok) throw new Error("Failed to stash")
+      const data = await res.json()
 
-      // Create a "complete" object to inject into the state
-      const optimisticEntry = {
-        ...data.userCollection,
-        collectionId: fullCollectionData // Manually attach the full object (title, desc, etc.)
-      };
+      if (setUserCollections) {
+        // 🔥 THE FIX: Find the full collection object from our current list
+        const fullCollectionData = collections.find((c: any) => c._id.toString() === collectionId);
 
-      setUserCollections((prev: any) => [optimisticEntry, ...prev])
+        // Create a "complete" object to inject into the state
+        const optimisticEntry = {
+          ...data.userCollection,
+          collectionId: fullCollectionData // Manually attach the full object (title, desc, etc.)
+        };
+
+        setUserCollections((prev: any) => [optimisticEntry, ...prev])
+      }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoadingId(null)
     }
-  } catch (err) {
-    console.error(err)
-  } finally {
-    setLoadingId(null)
   }
-}
 
   // Helper to render rating badge
   const RatingBadge = ({ ratings }: { ratings: any }) => {
@@ -146,7 +147,7 @@ export default function CollectionList({
                 >
                   📁
                 </motion.div>
-                
+
                 <div className="flex flex-col items-end gap-2">
                   <span className="px-3 py-1 bg-slate-100 dark:bg-white/5 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-purple-400 rounded-lg border border-slate-200 dark:border-white/10">
                     {resourceCount} Resources
@@ -197,10 +198,61 @@ export default function CollectionList({
             {/* Actions */}
             <div className="mt-8 flex items-center gap-3 relative z-10">
               <button
-                onClick={() => router.push(`/collection/${id}`)}
-                className="flex-1 py-3 text-[11px] font-black uppercase tracking-widest bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl hover:bg-slate-50 dark:hover:bg-white/10 transition-all duration-300"
+                onClick={() => {
+                  setNavigatingId(id); // Start loading
+                  router.push(`/collection/${id}`);
+                }}
+                disabled={!!navigatingId} // Disable all buttons while one is navigating
+                className="
+    flex-1 
+    py-3 
+    relative 
+    overflow-hidden 
+    text-[11px] 
+    font-black 
+    uppercase 
+    tracking-widest 
+    bg-white 
+    dark:bg-white/5 
+    border 
+    border-slate-200 
+    dark:border-white/10 
+    rounded-xl 
+    hover:bg-slate-50 
+    dark:hover:bg-white/10 
+    transition-all 
+    duration-300 
+    active:scale-95
+    disabled:opacity-70
+  "
               >
-                View Path
+                <AnimatePresence mode="wait">
+                  {navigatingId === id ? (
+                    <motion.div
+                      key="loading"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="flex items-center justify-center gap-2"
+                    >
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                        className="w-3 h-3 border-2 border-purple-600 dark:border-purple-400 border-t-transparent rounded-full"
+                      />
+                      <span>Opening</span>
+                    </motion.div>
+                  ) : (
+                    <motion.span
+                      key="text"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                    >
+                      View Path
+                    </motion.span>
+                  )}
+                </AnimatePresence>
               </button>
 
               <div className="flex-1 h-[46px] relative">
