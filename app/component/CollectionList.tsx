@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { motion, Variants, AnimatePresence } from "framer-motion"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
+import { useState } from "react";
+import { motion, Variants, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 // --- Animation Physics Constants ---
 const SOFT_SPRING = {
@@ -11,14 +11,14 @@ const SOFT_SPRING = {
   stiffness: 300,
   damping: 30,
   mass: 0.8,
-} as const
+} as const;
 
 const ENTRANCE_SPRING = {
   type: "spring",
   stiffness: 100,
   damping: 20,
   mass: 0.5,
-} as const
+} as const;
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -29,7 +29,7 @@ const containerVariants: Variants = {
       delayChildren: 0.1,
     },
   },
-}
+};
 
 const itemVariants: Variants = {
   hidden: {
@@ -43,7 +43,7 @@ const itemVariants: Variants = {
     scale: 1,
     transition: ENTRANCE_SPRING,
   },
-}
+};
 
 export default function CollectionList({
   collections = [],
@@ -51,43 +51,45 @@ export default function CollectionList({
   savedCollectionIds = [],
   setUserCollections,
 }: any) {
-  const router = useRouter()
-  const [loadingId, setLoadingId] = useState<string | null>(null)
+  const router = useRouter();
+  const [loadingId, setLoadingId] = useState<string | null>(null);
   const [navigatingId, setNavigatingId] = useState<string | null>(null);
 
   const handleGrab = async (collectionId: string) => {
-    if (!user) return alert("Sign in to stash this path!")
-    if (savedCollectionIds.includes(collectionId)) return
+    if (!user) return alert("Sign in to stash this path!");
+    if (savedCollectionIds.includes(collectionId)) return;
 
-    setLoadingId(collectionId)
+    setLoadingId(collectionId);
     try {
       const res = await fetch("/api/collections/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ collectionId }),
-      })
+      });
 
-      if (!res.ok) throw new Error("Failed to stash")
-      const data = await res.json()
+      if (!res.ok) throw new Error("Failed to stash");
+      const data = await res.json();
 
       if (setUserCollections) {
         // 🔥 THE FIX: Find the full collection object from our current list
-        const fullCollectionData = collections.find((c: any) => c._id.toString() === collectionId);
+        const fullCollectionData = collections.find(
+          (c: any) => c._id.toString() === collectionId,
+        );
 
         // Create a "complete" object to inject into the state
         const optimisticEntry = {
           ...data.userCollection,
-          collectionId: fullCollectionData // Manually attach the full object (title, desc, etc.)
+          collectionId: fullCollectionData, // Manually attach the full object (title, desc, etc.)
         };
 
-        setUserCollections((prev: any) => [optimisticEntry, ...prev])
+        setUserCollections((prev: any) => [optimisticEntry, ...prev]);
       }
     } catch (err) {
-      console.error(err)
+      console.error(err);
     } finally {
-      setLoadingId(null)
+      setLoadingId(null);
     }
-  }
+  };
 
   // Helper to render rating badge
   const RatingBadge = ({ ratings }: { ratings: any }) => {
@@ -115,10 +117,14 @@ export default function CollectionList({
       className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 p-4"
     >
       {collections.map((col: any) => {
-        const id = col._id?.toString()
-        const isSaved = savedCollectionIds.includes(id)
-        const isSaving = loadingId === id
-        const resourceCount = col.sections?.reduce((acc: number, sec: any) => acc + (sec.resources?.length || 0), 0) || 0
+        const id = col._id?.toString();
+        const isSaved = savedCollectionIds.includes(id);
+        const isSaving = loadingId === id;
+        const resourceCount =
+          col.sections?.reduce(
+            (acc: number, sec: any) => acc + (sec.resources?.length || 0),
+            0,
+          ) || 0;
 
         return (
           <motion.div
@@ -169,16 +175,23 @@ export default function CollectionList({
               <div className="flex items-center gap-3 mt-6">
                 <div className="relative w-7 h-7 flex-shrink-0">
                   <img
-                    src={col.createdBy?.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${col.createdBy?.name || 'fallback'}`}
+                    src={
+                      col.createdBy?.image ||
+                      `https://api.dicebear.com/7.x/avataaars/svg?seed=${col.createdBy?.name || "fallback"}`
+                    }
                     className="block w-full h-full rounded-full border-2 border-white dark:border-white/10 shadow-sm object-cover"
-                    alt={col.createdBy?.name ? `${col.createdBy.name}'s avatar` : "User avatar"}
+                    alt={
+                      col.createdBy?.name
+                        ? `${col.createdBy.name}'s avatar`
+                        : "User avatar"
+                    }
                     draggable={false}
                   />
                   <div className="absolute bottom-0 right-0 w-2 h-2 bg-emerald-500 border border-white dark:border-[#12121a] rounded-full" />
                 </div>
 
                 <Link
-                  href={`/profile/${col.createdBy?._id || '#'}`}
+                  href={`/profile/${col.createdBy?._id || "#"}`}
                   className="group/link inline-flex items-center gap-1.5 max-w-full min-w-0"
                 >
                   <p className="text-[11px] font-bold uppercase tracking-tighter truncate text-slate-400 dark:text-gray-500 transition-colors duration-300 group-hover/link:text-purple-500">
@@ -199,48 +212,54 @@ export default function CollectionList({
             <div className="mt-8 flex items-center gap-3 relative z-10">
               <button
                 onClick={() => {
-                  setNavigatingId(id); // Start loading
+                  setNavigatingId(id);
                   router.push(`/collection/${id}`);
                 }}
-                disabled={!!navigatingId} // Disable all buttons while one is navigating
+                disabled={!!navigatingId}
                 className="
-    flex-1 
-    py-3 
-    relative 
-    overflow-hidden 
-    text-[11px] 
-    font-black 
-    uppercase 
-    tracking-widest 
-    bg-white 
-    dark:bg-white/5 
-    border 
-    border-slate-200 
-    dark:border-white/10 
-    rounded-xl 
-    hover:bg-slate-50 
-    dark:hover:bg-white/10 
-    transition-all 
-    duration-300 
-    active:scale-95
-    disabled:opacity-70
-  "
+                  flex-1 
+                  py-3 
+                  relative 
+                  overflow-hidden 
+                  text-[11px] 
+                  font-black 
+                  uppercase 
+                  tracking-widest 
+                  bg-white 
+                  dark:bg-white/5 
+                  border 
+                  border-slate-200 
+                  dark:border-white/10 
+                  rounded-xl 
+                  hover:bg-slate-50 
+                  dark:hover:bg-white/10 
+                  transition-all 
+                  duration-300 
+                  active:scale-95
+                  disabled:opacity-70
+                  disabled:cursor-not-allowed
+                "
               >
                 <AnimatePresence mode="wait">
                   {navigatingId === id ? (
                     <motion.div
                       key="loading"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
                       className="flex items-center justify-center gap-2"
                     >
                       <motion.div
                         animate={{ rotate: 360 }}
-                        transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-                        className="w-3 h-3 border-2 border-purple-600 dark:border-purple-400 border-t-transparent rounded-full"
+                        transition={{
+                          repeat: Infinity,
+                          duration: 0.8, // Slightly faster for a "snappier" feel
+                          ease: "linear",
+                        }}
+                        // FIXED: Increased size to w-4, border to 2.5px, and used higher contrast colors
+                        className="w-4 h-4 border-[2.5px] border-purple-600 dark:border-white border-t-transparent dark:border-t-transparent rounded-full shadow-sm"
                       />
-                      <span>Opening</span>
+                      <span className="text-purple-600 dark:text-white">Opening</span>
                     </motion.div>
                   ) : (
                     <motion.span
@@ -281,7 +300,11 @@ export default function CollectionList({
                       {isSaving ? (
                         <motion.div
                           animate={{ rotate: 360 }}
-                          transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                          transition={{
+                            repeat: Infinity,
+                            duration: 1,
+                            ease: "linear",
+                          }}
                           className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full mx-auto"
                         />
                       ) : (
@@ -293,8 +316,8 @@ export default function CollectionList({
               </div>
             </div>
           </motion.div>
-        )
+        );
       })}
     </motion.div>
-  )
+  );
 }
