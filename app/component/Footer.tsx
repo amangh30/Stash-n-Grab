@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { motion } from "framer-motion"
-import { FaGithub, FaTwitter, FaLinkedin } from "react-icons/fa"
+import { FaGithub, FaInstagram, FaLinkedin } from "react-icons/fa"
 
 export default function Footer() {
   const currentYear = new Date().getFullYear()
@@ -53,8 +53,8 @@ export default function Footer() {
             </h4>
             <div className="flex gap-4">
               {[
-                { icon: <FaGithub size={20} />, href: "https://github.com", label: "GitHub" },
-                { icon: <FaTwitter size={20} />, href: "https://twitter.com", label: "Twitter" },
+                { icon: <FaGithub size={20} />, href: "https://www.github.com/amangh30", label: "GitHub" },
+                { icon: <FaInstagram size={20} />, href: "https://www.instagram.com/amansinha_30/", label: "Twitter" },
                 { icon: <FaLinkedin size={20} />, href: "https://linkedin.com", label: "LinkedIn" }
               ].map((social) => (
                 <motion.a
