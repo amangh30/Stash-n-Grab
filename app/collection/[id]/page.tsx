@@ -12,6 +12,7 @@ import CurriculumViewer from "@/app/component/CurriculumViewer"
 import UserResource from "@/models/UserResource"
 import UserCollection from "@/models/UserCollection";
 import UserRating from "@/models/UserRating";
+import BackLink from "@/app/component/BackLink."
 import UserSection from "@/models/UserSection";
 
 export const dynamic = "force-dynamic";
@@ -92,9 +93,7 @@ export default async function CollectionDetailPage({ params }: any) {
       <div className="max-w-4xl mx-auto">
         
         {/* 2. Back Link: Slate for Light, Gray/White for Dark */}
-        <Link href="/" className="text-slate-500 hover:text-slate-900 dark:text-gray-400 dark:hover:text-white transition font-bold text-sm flex items-center gap-2 mb-10">
-          ← Back to Vault
-        </Link>
+        <BackLink />
 
         <header className="mt-10 mb-16">
           <div className="flex flex-wrap items-center gap-4 mb-6">
