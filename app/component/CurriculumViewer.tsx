@@ -304,7 +304,7 @@ export default function CurriculumViewer({
       </AnimatePresence>
 
       {/* ARCHITECT TOGGLE */}
-      {isOwner && (
+      {(isOwner && user) && (
         <div className="flex justify-end">
           <button 
             onClick={() => setIsEditing(true)}
