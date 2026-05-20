@@ -22,6 +22,8 @@ export default function MyCollections({ userCollections, setUserCollections, not
   const router = useRouter()
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState<string | null>(null)
+  // 🔥 NEW: Track which specific collection is currently routing
+  const [navigatingId, setNavigatingId] = useState<string | null>(null)
 
   // 🔥 NEW: Unstash Handler
   const handleUnstash = async (e: React.MouseEvent, collectionId: string) => {
@@ -53,6 +55,12 @@ export default function MyCollections({ userCollections, setUserCollections, not
     }
   };
 
+  // 🔥 NEW: Navigation Handler
+  const handleNavigate = (collectionId: string, url: string) => {
+    setNavigatingId(collectionId);
+    router.push(url);
+  };
+
   return (
     <motion.div 
       initial="hidden"
@@ -67,8 +75,9 @@ export default function MyCollections({ userCollections, setUserCollections, not
 
           const collectionUrl = `/collection/${col._id}`
           const isExpanded = expandedId === item._id
-          // 🔥 Constraint: Progress must be 0 to unstash
           const canUnstash = item.progress === 0;
+          // 🔥 NEW: Check if this specific card is navigating
+          const isNavigating = navigatingId === col._id;
 
           return (
             <motion.div
@@ -133,21 +142,38 @@ export default function MyCollections({ userCollections, setUserCollections, not
                   <button 
                     onClick={(e) => handleUnstash(e, col._id)}
                     disabled={isDeleting === col._id}
-                    className="px-5 py-3.5 rounded-xl border border-red-500/20 bg-red-500/5 text-red-500 text-[11px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all active:scale-95"
+                    className="px-5 py-3.5 rounded-xl border border-red-500/20 bg-red-500/5 text-red-500 text-[11px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all active:scale-95 flex items-center justify-center"
                   >
-                    {isDeleting === col._id ? "..." : "✕"}
+                    {isDeleting === col._id ? (
+                      <svg className="animate-spin h-4 w-4 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    ) : "✕"}
                   </button>
                 )}
 
+                {/* 🔥 UPDATED NAVIGATION BUTTON */}
                 <button 
-                  onClick={() => router.push(collectionUrl)}
-                  className={`flex-[2] py-3.5 rounded-xl text-[11px] font-black uppercase tracking-widest shadow-lg transition-all active:scale-95 ${
+                  onClick={() => handleNavigate(col._id, collectionUrl)}
+                  disabled={isNavigating}
+                  className={`flex-[2] py-3.5 rounded-xl text-[11px] font-black uppercase tracking-widest shadow-lg transition-all flex items-center justify-center gap-2 ${
                     item.progress === 100 
-                      ? "bg-[#0066FF] text-white shadow-[0_0_18px_rgba(0,102,255,0.45),0_0_42px_rgba(0,153,255,0.28)] hover:bg-[#0A7CFF] hover:shadow-[0_0_24px_rgba(0,102,255,0.65),0_0_60px_rgba(0,153,255,0.4)] hover:-translate-y-0.5"
-                      : "bg-purple-600 text-white shadow-purple-500/25 hover:bg-purple-500 hover:-translate-y-0.5"
-                  }`}
+                      ? "bg-[#0066FF] text-white shadow-[0_0_18px_rgba(0,102,255,0.45),0_0_42px_rgba(0,153,255,0.28)] hover:bg-[#0A7CFF] hover:shadow-[0_0_24px_rgba(0,102,255,0.65),0_0_60px_rgba(0,153,255,0.4)]"
+                      : "bg-purple-600 text-white shadow-purple-500/25 hover:bg-purple-500"
+                  } ${isNavigating ? "opacity-90 cursor-not-allowed pointer-events-none" : "active:scale-95 hover:-translate-y-0.5"}`}
                 >
-                  {item.progress === 100 ? "Review Mastery" : "Resume Journey"}
+                  {isNavigating ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span>Loading...</span>
+                    </>
+                  ) : (
+                    <span>{item.progress === 100 ? "Review Mastery" : "Resume Journey"}</span>
+                  )}
                 </button>
               </div>
 
