@@ -33,7 +33,7 @@ export default function Footer() {
               Platform
             </h4>
             <ul className="space-y-4">
-              {["Explore", "Rankings", "Profile", "Guidelines"].map((item) => (
+              {["Explore", "Profile", "Guidelines"].map((item) => (
                 <li key={item}>
                   <Link 
                     href={`/${item.toLowerCase()}`} 

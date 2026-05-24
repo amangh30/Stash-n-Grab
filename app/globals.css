@@ -18,3 +18,82 @@ body {
   font-family: Arial, Helvetica, sans-serif;
   transition: background-color 0.3s ease, color 0.3s ease;
 }
+
+/* ==========================================================================
+   GLOBAL CYBERPUNK SCROLLBAR
+   ========================================================================== */
+
+/* 1. Standard Webkit Browsers (Chrome, Safari, Edge, Opera) */
+::-webkit-scrollbar {
+  width: 10px;  /* Vertical scrollbar width */
+  height: 10px; /* Horizontal scrollbar height */
+}
+
+/* The track background (Matches your deep dark #0b0b0f palette) */
+::-webkit-scrollbar-track {
+  background: #0b0b0f;
+  border-left: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+/* The draggable scroll thumb */
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    to bottom,
+    rgba(147, 51, 234, 0.3), /* purple-600 with opacity */
+    rgba(59, 130, 246, 0.3)   /* blue-500 with opacity */
+  );
+  border-radius: 100px;
+  border: 2px solid #0b0b0f; /* Creates a visual padding effect */
+  background-clip: padding-box;
+  transition: all 0.3s ease;
+}
+
+/* Thumb Hover State - Energizes the neon glow */
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    to bottom,
+    rgba(168, 85, 247, 0.8), /* Brighter purple */
+    rgba(59, 130, 246, 0.8)   /* Brighter blue */
+  );
+  border: 1px solid #0b0b0f;
+}
+
+/* Thumb Active State (When dragging) */
+::-webkit-scrollbar-thumb:active {
+  background: #a855f7; /* Solid neon purple */
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.5);
+}
+
+/* 2. Firefox Support (Uses standard properties) */
+@supports (scrollbar-color: auto) {
+  html {
+    scrollbar-color: rgba(147, 51, 234, 0.4) #0b0b0f;
+    scrollbar-width: thin;
+  }
+}
+
+/* ==========================================================================
+   OPTIONAL: Custom Class for Modals/Nested Container Areas
+   ========================================================================== */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(147, 51, 234, 0.4) transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  border: none;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(147, 51, 234, 0.6);
+}
