@@ -163,6 +163,5 @@ Every architectural decision—from Gatekeeper Exams to immutable XP records—s
 * Adaptive exam difficulty
 * Learning analytics dashboards
 * Team learning workspaces
-* AI-assisted curriculum generation
 * Skill-based recommendation engine
 * Achievement and badge ecosystem
